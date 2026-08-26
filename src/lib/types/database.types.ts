@@ -88,6 +88,7 @@ export interface Task {
   priority: TaskPriority;
   created_by?: string | null;
   deadline?: string | null;
+  status_changed_at?: string | null;
   created_at: string;
   updated_at: string;
   // Joins

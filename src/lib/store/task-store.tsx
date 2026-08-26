@@ -22,6 +22,7 @@ import {
 } from "@/lib/types/database.types";
 import { validateStateTransition } from "@/lib/workflow/state-machine";
 import { translateText } from "@/lib/i18n/auto-translate";
+import { SupabaseSyncService } from "@/lib/supabase/sync-service";
 
 // Default Initial Organization
 const defaultOrg = {
@@ -669,45 +670,62 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [teams, setTeams] = useState<Team[]>(defaultTeams);
   const [projects] = useState<Project[]>(defaultProjects);
 
-  // Load from localStorage if available
+  // Load from Supabase Cloud & Subscribe to Realtime Cross-Device Updates
   useEffect(() => {
-    try {
-      const savedTasks = localStorage.getItem("taskflow_tasks");
-      const savedIssues = localStorage.getItem("taskflow_issues");
-      const savedLogs = localStorage.getItem("taskflow_logs");
-      const savedUsers = localStorage.getItem("taskflow_users");
-      const savedTeams = localStorage.getItem("taskflow_teams");
-      const savedAttachments = localStorage.getItem("taskflow_attachments");
-      const savedTimeEntries = localStorage.getItem("taskflow_time_entries");
-      const savedUser = localStorage.getItem("taskflow_current_user");
+    let unsubscribe: (() => void) | undefined;
 
-      if (savedUsers) setUsers(JSON.parse(savedUsers));
-      if (savedAttachments) setAttachments(JSON.parse(savedAttachments));
-      if (savedTimeEntries) setTimeEntries(JSON.parse(savedTimeEntries));
-      if (savedTeams) {
-        const parsed = JSON.parse(savedTeams);
-        // If saved teams has less than 8 teams, merge with new complete housing list
-        if (parsed.length < 8) {
-          setTeams(defaultTeams);
-          localStorage.setItem("taskflow_teams", JSON.stringify(defaultTeams));
-        } else {
-          setTeams(parsed);
+    const loadCloudData = async () => {
+      try {
+        const cloudData = await SupabaseSyncService.fetchCloudData();
+        if (cloudData) {
+          if (cloudData.tasks && cloudData.tasks.length > 0) {
+            const mappedTasks: Task[] = cloudData.tasks.map((dbTask: any) => {
+              const project = cloudData.projects?.find((p: any) => p.id === dbTask.project_id) || defaultProjects[0];
+              const creator = cloudData.users?.find((u: any) => u.id === dbTask.created_by) || defaultUsers[0];
+              const permit = cloudData.permits?.find((p: any) => p.task_id === dbTask.id);
+              const taskComments = (cloudData.comments || []).filter((c: any) => c.task_id === dbTask.id);
+              const taskIssues = (cloudData.issues || []).filter((i: any) => i.task_id === dbTask.id && !i.is_resolved);
+
+              return {
+                ...dbTask,
+                project,
+                creator,
+                assignees: [],
+                permit_details: permit || undefined,
+                comments_count: taskComments.length,
+                unresolved_issues_count: taskIssues.length,
+              };
+            });
+            setTasks(mappedTasks);
+          }
+
+          if (cloudData.teams && cloudData.teams.length > 0) setTeams(cloudData.teams);
+          if (cloudData.users && cloudData.users.length > 0) setUsers(cloudData.users);
+          if (cloudData.comments && cloudData.comments.length > 0) setComments(cloudData.comments);
+          if (cloudData.attachments && cloudData.attachments.length > 0) setAttachments(cloudData.attachments);
+          if (cloudData.issues && cloudData.issues.length > 0) setIssues(cloudData.issues);
+          if (cloudData.timeEntries && cloudData.timeEntries.length > 0) setTimeEntries(cloudData.timeEntries);
+          if (cloudData.activityLogs && cloudData.activityLogs.length > 0) setActivityLogs(cloudData.activityLogs);
         }
-      } else {
-        localStorage.setItem("taskflow_teams", JSON.stringify(defaultTeams));
+      } catch (err) {
+        console.warn("[Cloud Data Load Fallback]:", err);
       }
+    };
 
-      if (savedTasks) setTasks(JSON.parse(savedTasks));
-      if (savedIssues) setIssues(JSON.parse(savedIssues));
-      if (savedLogs) setActivityLogs(JSON.parse(savedLogs));
-      if (savedUser) {
-        const parsedUsers = savedUsers ? JSON.parse(savedUsers) : defaultUsers;
-        const found = parsedUsers.find((u: UserProfile) => u.id === savedUser);
-        if (found) setCurrentUser(found);
-      }
-    } catch {
-      // fallback
-    }
+    loadCloudData();
+
+    // Subscribe to Realtime Postgres WebSockets for instant cross-device updates
+    unsubscribe = SupabaseSyncService.subscribeRealtime({
+      onTaskChange: () => loadCloudData(),
+      onCommentChange: () => loadCloudData(),
+      onIssueChange: () => loadCloudData(),
+      onPermitChange: () => loadCloudData(),
+      onLogChange: () => loadCloudData(),
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const saveState = (newTasks: Task[], newIssues: TaskIssue[], newLogs: ActivityLog[]) => {
@@ -908,6 +926,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, issues, updatedLogs);
 
+    // Persist to Supabase Cloud for cross-device visibility
+    SupabaseSyncService.saveTask(newTask, newTask.permit_details || undefined);
+
     if (newTask.assignees && newTask.assignees.length > 0) {
       newTask.assignees.forEach((assignee) => {
         const notif: NotificationItem = {
@@ -971,6 +992,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, issues, updatedLogs);
 
+    // Persist status change to Supabase Cloud
+    SupabaseSyncService.saveTask({
+      id: taskId,
+      status: newStatus,
+      status_changed_at: new Date().toISOString(),
+    });
+
     const notif: NotificationItem = {
       id: `notif-${Date.now()}`,
       user_id: task.created_by || currentUser.id,
@@ -1022,6 +1050,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setTasks(updatedTasks);
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, issues, updatedLogs);
+
+    // Persist details to Supabase Cloud
+    SupabaseSyncService.saveTask({ id: taskId, ...updates });
   };
 
   const deleteTask = (taskId: string): { success: boolean; message?: string } => {
@@ -1031,6 +1062,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedTasks = tasks.filter((t) => t.id !== taskId);
     setTasks(updatedTasks);
     saveState(updatedTasks, issues, activityLogs);
+
+    // Delete from Supabase Cloud
+    SupabaseSyncService.deleteTask(taskId);
+
     return { success: true };
   };
 
@@ -1072,6 +1107,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedLogs = [newLog, ...activityLogs];
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, updatedIssues, updatedLogs);
+
+    // Persist issue to Supabase Cloud
+    SupabaseSyncService.saveIssue(newIssue);
 
     return newIssue;
   };
@@ -1120,6 +1158,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedLogs = [newLog, ...activityLogs];
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, updatedIssues, updatedLogs);
+
+    // Persist issue resolution to Supabase Cloud
+    SupabaseSyncService.saveIssue({
+      id: issueId,
+      task_id: issue.task_id,
+      issue_description: issue.issue_description,
+      is_resolved: true,
+      resolved_by: currentUser.id,
+      resolved_at: new Date().toISOString(),
+      resolution_description: resolution,
+    });
   };
 
   const updatePermitDetails = (taskId: string, updates: Partial<PermitDetails>) => {
@@ -1138,6 +1187,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     });
     setTasks(updatedTasks);
     saveState(updatedTasks, issues, activityLogs);
+
+    // Persist permit details to Supabase Cloud
+    SupabaseSyncService.saveTask({ id: taskId }, updates);
   };
 
   const updatePermitStatus = (taskId: string, newStatus: PermitStatus) => {
@@ -1181,6 +1233,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setTasks(updatedTasks);
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, issues, updatedLogs);
+
+    // Persist permit status to Supabase Cloud
+    SupabaseSyncService.saveTask({ id: taskId }, { permit_status: newStatus, revision_round: newRevisionRound });
   };
 
   const addComment = async (taskId: string, content: string, contentEn?: string): Promise<Comment> => {
@@ -1207,6 +1262,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     );
     setTasks(updatedTasks);
     saveState(updatedTasks, issues, activityLogs);
+
+    // Persist comment to Supabase Cloud
+    SupabaseSyncService.saveComment(newComment);
+
     return newComment;
   };
 
@@ -1292,6 +1351,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     };
     const updatedLogs = [newLog, ...activityLogs];
     setActivityLogs(updatedLogs);
+
+    // Persist time entry to Supabase Cloud
+    SupabaseSyncService.saveTimeEntry(newEntry);
 
     try {
       localStorage.setItem("taskflow_time_entries", JSON.stringify(updatedEntries));
