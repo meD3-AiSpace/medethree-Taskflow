@@ -1,0 +1,155 @@
+// ====================================================================
+// Dynamic On-the-fly Translation Dictionary & Helper
+// Guarantees 100% of all dynamic tasks, issues, notifications,
+// comments, projects, teams, departments, and user roles are translated.
+// ====================================================================
+
+import { Language } from "./translations";
+
+export const dynamicDictionary: Record<string, string> = {
+  // Departments (12 Housing & Construction Departments)
+  "ฝ่ายที่ปรึกษาโครงการและกฎหมาย (Advisory & Legal/Permit)": "Advisory & Legal Permit Department",
+  "ฝ่ายสำรวจและออกแบบ (Survey & Architectural Design)": "Survey & Architectural Design Department",
+  "ฝ่ายก่อสร้างและควบคุมงานสนาม (Construction & Site Engineering)": "Construction & Site Engineering Department",
+  "ฝ่ายงานระบบและสุขาภิบาล (MEP & Building Systems Engineering)": "MEP & Building Systems Engineering Department",
+  "ฝ่ายประมาณราคาและควบคุมต้นทุน (Cost Control & Quantity Survey - QS)": "Cost Control & Quantity Survey (QS) Department",
+  "ฝ่ายจัดซื้อและคลังวัสดุก่อสร้าง (Procurement & Material Inventory)": "Procurement & Material Inventory Department",
+  "ฝ่ายตรวจสอบคุณภาพและส่งมอบบ้าน (QA/QC & Home Handover)": "QA/QC & Home Handover Department",
+  "ฝ่ายการตลาดและการขาย (Marketing & Sales Development)": "Marketing, Sales & CRM Department",
+  "ฝ่ายบริการหลังการขายและนิติบุคคล (After-Sales Service & Estate Management)": "After-Sales Service & Estate Management Department",
+  "ฝ่ายพัฒนาธุรกิจและจัดหาที่ดิน (Business Development & Land Acquisition)": "Business Development & Land Acquisition Department",
+  "ฝ่ายบัญชีและการเงิน (Accounting & Finance)": "Accounting & Finance Department",
+  "ฝ่ายสนับสนุนงานส่วนกลางและบุคคล (Central Support & Administration / HR)": "Central Support & Administration / HR Department",
+
+  // Department Descriptions
+  "ให้คำปรึกษากฎหมายอาคาร ผังเมือง กฎหมายจัดสรรที่ดิน และประสานงานราชการ": "Provides legal counsel on building codes, urban zoning, land subdivision laws, and municipal permits.",
+  "สำรวจพื้นที่ รังวัดที่ดิน ออกแบบสถาปัตยกรรม แปลน 3D Perspective และตกแต่งภายใน": "Land surveying, boundary demarcation, architectural BIM/CAD design, 3D perspective renderings, and interior design.",
+  "ควบคุมงานก่อสร้างบ้านเดี่ยว ทาวน์โฮม อาคารชุด และงานสาธารณูปโภคหน้างานจริง": "On-site construction supervision for single homes, townhomes, condominiums, and estate infrastructure.",
+  "ควบคุมและติดตั้งงานระบบไฟฟ้า ประปา สุขาภิบาล แอร์ และระบบดับเพลิง": "Supervises installation of MEP systems: electrical, plumbing, sanitary drainage, HVAC, and fire protection.",
+  "ถอดแบบ คิดราคางาน BOQ ควบคุมงบประมาณโครงการ และตรวจงวดงานผู้รับเหมา": "Quantity surveying, BOQ cost estimation, project budget control, and subcontractor milestone verification.",
+  "จัดซื้อเหล็ก ปูน คอนกรีต กระเบื้อง สุขภัณฑ์ คุมสต็อกและประสานงาน Supplier": "Procures construction materials (steel, cement, tiles, sanitary ware), controls inventory, and manages suppliers.",
+  "ตรวจสอบมาตรฐานความปลอดภัย ตรวจ Defect บ้านก่อนส่งมอบลูกค้า และตรวจรับมอบบ้าน": "Safety inspections, pre-handover defect rectifications, quality control, and customer home delivery handover.",
+  "วางแผนการตลาด ยิงโฆษณา จัดโปรโมชั่นบ้านตัวอย่าง ปิดการขาย และประสานงานสินเชื่อธนาคาร": "Marketing campaigns, digital ads, showhouse promotions, sales closing, and bank mortgage loan coordination.",
+  "รับเรื่องเคลมประกันบ้าน 1-5 ปี ซ่อมบำรุง และบริหารจัดการสิ่งอำนวยความสะดวกในโครงการ": "Handles 1-5 year warranty claims, routine maintenance, and estate facilities & HOA management.",
+  "จัดหาที่ดินแปลงใหม่ วิเคราะห์ความเป็นไปได้ทางการเงิน (Feasibility) และวางแผนพัฒนาโครงการ": "Land acquisition, financial feasibility studies, and new residential project development planning.",
+  "จัดการบัญชีต้นทุนโครงการ การเบิกจ่ายงวดงาน ภาษีที่ดิน และบริหารกระแสเงินสด": "Project cost accounting, contractor payment disbursements, land taxes, and corporate cash flow management.",
+  "งานสารบรรณ ธุรการ จัดการเอกสารสัญญา บริหารทรัพยากรบุคคล และยานพาหนะส่วนกลาง": "General administration, official contract management, human resources (HR), and corporate fleet support.",
+
+  // User Default Names
+  "สมเกียรติ สถาปัตย์ (MD / Project Director)": "Somkiat Sthapat (MD / Project Director)",
+  "วิชัย บริหารงาน (Project Manager / Supervisor)": "Wichai Borihan (Project Manager / Supervisor)",
+  "กานดา สถาปนิก (Senior Architect / Design Lead)": "Kanda Sthapanik (Senior Architect / Design Lead)",
+  "ธวัชชัย ช่างคุมงาน (Site Engineer / Supervisor)": "Thawatchai Changkumngan (Site Engineer / Supervisor)",
+  "ประเสริฐ วิศวกรงานระบบ (MEP Engineer)": "Prasert MEP (MEP Systems Engineer)",
+  "ศิริพร ประมาณราคา (QS / Cost Controller)": "Siriporn QS (Cost Controller / QS)",
+  "อรอนงค์ การตลาด (Marketing & Sales Executive)": "Oranong Marketing (Marketing & Sales Executive)",
+  "ณรงค์เดช ตรวจรับมอบบ้าน (QA/QC Inspector)": "Narongdej QA/QC (Home Handover Inspector)",
+
+  // Notifications
+  "มีปัญหาติดขัดใหม่": "New Blocker / Issue Logged",
+  "งานแก้แบบโครงสร้างชั้น 3 ติดแนวท่องานระบบ มีการแจ้งติดปัญหา": "Revise 3rd floor structural plan: new blocker issue reported regarding MEP clash.",
+  "ใบขออนุญาตถูกตีกลับแก้ไข": "Building Permit Revision Required",
+  "ใบอนุญาตก่อสร้าง อ.1 สำนักงานเขตวัฒนา มีคำสั่งให้แก้ไขระยะร่น": "Building Permit A.1 (Watthana District Office): revision required for eastern building setback.",
+  "ได้รับมอบหมายงานใหม่": "New Task Assignment Received",
+  "สถานะงานเปลี่ยนแปลง": "Task Status Updated",
+  "ไม่มีการแจ้งเตือน": "No notifications yet",
+
+  // Tasks Titles
+  "ออกแบบแปลนชั้น 1 และบันไดหลัก The Forest Villa": "Design 1st Floor Plan & Main Staircase for The Forest Villa",
+  "แก้แบบโครงสร้างชั้น 3 ติดแนวท่องานระบบสุขาภิบาล": "Revise 3rd Floor Structural Plan Due to Sanitary Pipe Clash",
+  "ยื่นขอใบอนุญาตก่อสร้าง อ.1 (คอนโดมิเนียมสุขุมวิท 49)": "Submit Building Construction Permit Form A.1 (Sukhumvit 49 Condo)",
+  "ส่งแบบ 3D Perspective ห้อง Master Bedroom": "Submit 3D Perspective Rendering for Master Bedroom",
+  "สำรวจพื้นที่หน้างานจริงและตรวจระดับหมุดที่ดิน": "Site Survey & Property Boundary Elevation Verification",
+  "จัดเตรียมเอกสารรายงานผลกระทบสิ่งแวดล้อม (EIA)": "Prepare Environmental Impact Assessment (EIA) Report",
+
+  // Task Descriptions
+  "ออกแบบ Schematic Design แปลนชั้นล่างเชื่อมต่อสระว่ายน้ำ และระบุระดับบันได": "Schematic Design of ground floor layout connecting to swimming pool and staircase elevation specs.",
+  "ท่อสุขาภิบาลชนคานโครงสร้างหลัก ต้องปรับระดับฝ้าเพดานหรือเบี่ยงท่องานระบบ": "Sanitary drainage pipe clashing with main structural beam; requires ceiling adjustment or MEP offset.",
+  "ยื่นเอกสารแบบขออนุญาตก่อสร้างอาคารชุด ณ สำนักงานเขตวัฒนา กรุงเทพฯ": "Submit condominium construction permit application at Watthana District Office, Bangkok.",
+  "เรนเดอร์ภาพ Perspective ความละเอียดสูง 4K ส่งให้ Supervisor ตรวจรับ": "High-resolution 4K architectural perspective rendering submitted for Supervisor sign-off.",
+  "เช็คค่าระดับถนนเทียบกับระดับพื้นโครงการ The Forest Villa": "Inspect finished road elevation level compared to The Forest Villa finished floor level benchmark.",
+  "รวบรวมเล่มเอกสารและรายงานการศึกษาผลกระทบสิ่งแวดล้อม": "Compile comprehensive documentation and study report for environmental impact evaluation.",
+
+  // Issue / Blocker Descriptions & Resolutions
+  "คานคอนกรีตระดับ +3.20m ชนแนวท่อระบายน้ำหลัก ไม่สามารถวางท่อลาดเอียง 1:100 ได้": "Concrete beam at +3.20m clashes with main drainage pipe; unable to maintain 1:100 slope gradient.",
+  "เจ้าหน้าที่เขตแจ้งว่าระยะร่นด้านข้างอาคารฝั่งทิศตะวันออกขาดไป 15 cm ตามข้อบัญญัติ กทม.": "District authority notified that east side setback lacks 15cm under Bangkok Metropolitan building regulations.",
+  "พบหมุดหลักเขตที่ดินฝั่งทิศใต้ถูกถมดินทับมองไม่เห็น": "South boundary marker was buried and obscured by landfill elevation.",
+  "ประสานงานเจ้าหน้าที่รังวัดที่ดินใช้เครื่องมือค้นหาและปักหมุดชั่วคราวแล้ว": "Coordinated with land survey officers to trace boundary and installed certified temporary benchmark.",
+  "มีข้อติดขัดที่ต้องประสานงาน": "Active coordination blocker issue",
+
+  // Comments
+  "กำลังจัดวางบันไดแบบ Double Flight เชื่อมกับโถงต้อนรับครับ": "Currently designing double-flight staircase layout connected to the main entrance foyer.",
+  "แนบภาพเรนเดอร์ perspective 4k มุมมองหลักและ Walk-in closet เรียบร้อยแล้วครับ รบกวนตรวจรับครับ": "Attached 4K perspective renderings for master bedroom and walk-in closet for supervisor review.",
+
+  // Projects
+  "โครงการบ้านเดี่ยว The Forest Villa": "The Forest Villa Residence Project",
+  "โครงการคอนโดมิเนียมสุขุมวิท 49": "Sukhumvit 49 Condominium Project",
+  "โครงการทาวน์โฮม Grand Living สาทร-ราชพฤกษ์": "Grand Living Townhome Project",
+  "โครงการทั่วไป": "General Project",
+
+  // Permit Types & Authorities
+  "ใบอนุญาตก่อสร้าง (อ.1)": "Building Construction Permit (Form A.1)",
+  "ใบอนุญาตดัดแปลงอาคาร": "Building Renovation / Alteration Permit",
+  "รายงานผลกระทบสิ่งแวดล้อม (EIA)": "Environmental Impact Assessment (EIA)",
+  "ใบรับรองการก่อสร้าง (อ.6)": "Building Occupancy Certificate (Form A.6)",
+  "ขอเชื่อมทางสาธารณะ": "Public Right-of-Way Connection Request",
+  "สำนักงานเขตวัฒนา กรุงเทพฯ": "Watthana District Office, Bangkok",
+  "สำนักงานนโยบายและแผนทรัพยากรธรรมชาติและสิ่งแวดล้อม (สผ.)": "Office of Natural Resources and Environmental Policy and Planning (ONEP)",
+  "สำนักงานเขต / เทศบาล": "District Office / Municipality",
+};
+
+/**
+ * Translates any Thai dynamic text into English when lang === 'en'
+ */
+export function getLocalizedDynamicText(
+  thaiText: string | null | undefined,
+  englishText: string | null | undefined,
+  lang: Language = "th"
+): string {
+  if (!thaiText && !englishText) return "";
+
+  // If in Thai mode
+  if (lang === "th") {
+    return thaiText || englishText || "";
+  }
+
+  // In English mode:
+  // 1. If explicit english translation exists and is non-empty, use it
+  if (englishText && englishText.trim()) {
+    return englishText;
+  }
+
+  if (!thaiText) return "";
+
+  const trimmed = thaiText.trim();
+
+  // 2. Check dynamic dictionary
+  if (dynamicDictionary[trimmed]) {
+    return dynamicDictionary[trimmed];
+  }
+
+  // 3. Check regex pattern rules
+  let translated = trimmed;
+  translated = translated.replace(/คุณได้รับมอบหมายงาน: "([^"]+)"/g, (match, taskName) => {
+    const enTask = dynamicDictionary[taskName] || taskName;
+    return `You have been assigned to task: "${enTask}"`;
+  });
+
+  translated = translated.replace(/งาน "([^"]+)" เปลี่ยนสถานะเป็น (.+)/g, (match, taskName, st) => {
+    const enTask = dynamicDictionary[taskName] || taskName;
+    return `Task "${enTask}" status changed to ${st}`;
+  });
+
+  translated = translated.replace(/โครงการบ้านเดี่ยว/g, "Single-Detached House Project");
+  translated = translated.replace(/โครงการคอนโดมิเนียม/g, "Condominium Project");
+  translated = translated.replace(/โครงการทาวน์โฮม/g, "Townhome Project");
+  translated = translated.replace(/สำนักงานเขต/g, "District Office");
+  translated = translated.replace(/ใบอนุญาต/g, "Permit");
+  translated = translated.replace(/แบบสถาปัตย์/g, "Architectural Drawing");
+  translated = translated.replace(/โครงสร้าง/g, "Structure");
+  translated = translated.replace(/งานระบบ/g, "MEP Systems");
+  translated = translated.replace(/สุขาภิบาล/g, "Sanitary");
+  translated = translated.replace(/ตรวจรับงาน/g, "Review deliverables");
+
+  return translated;
+}

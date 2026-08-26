@@ -1,0 +1,574 @@
+"use client";
+
+import React, { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useTaskStore } from "@/lib/store/task-store";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Search,
+  Plus,
+  Filter,
+  Calendar,
+  AlertCircle,
+  FileCheck2,
+  CheckCircle2,
+  Clock,
+  ArrowUpDown,
+  RefreshCcw,
+  X,
+  AlertTriangle,
+  ShieldAlert,
+  Paperclip,
+} from "lucide-react";
+import {
+  formatDate,
+  getCategoryLabel,
+  getPriorityBadgeColor,
+  getPriorityLabel,
+  getStatusLabel,
+} from "@/lib/utils";
+import { CreateTaskModal } from "@/components/tasks/create-task-modal";
+import { QuickLogIssueModal } from "@/components/tasks/quick-issue-modal";
+import { QuickAttachModal } from "@/components/tasks/quick-attach-modal";
+import { ViewModeSwitcher } from "@/components/tasks/view-mode-switcher";
+import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
+
+function TasksListContent() {
+  const searchParams = useSearchParams();
+  const { tasks, projects, users } = useTaskStore();
+  const { t, lang } = useLanguage();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [issueModalTask, setIssueModalTask] = useState<any>(null);
+  const [attachModalTask, setAttachModalTask] = useState<any>(null);
+
+  // URL Query Parameters
+  const paramStatus = searchParams.get("status");
+  const paramFilter = searchParams.get("filter");
+
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedSpecialFilter, setSelectedSpecialFilter] = useState<string>("all");
+  const [selectedPriority, setSelectedPriority] = useState("all");
+  const [selectedProject, setSelectedProject] = useState("all");
+  const [sortBy, setSortBy] = useState<"deadline" | "priority" | "created_at">("deadline");
+
+  // Sync from URL params on load or change
+  useEffect(() => {
+    if (paramFilter === "overdue") {
+      setSelectedSpecialFilter("overdue");
+      setSelectedStatus("all");
+    } else if (paramFilter === "issues") {
+      setSelectedSpecialFilter("issues");
+      setSelectedStatus("all");
+    } else if (paramFilter === "at_risk") {
+      setSelectedSpecialFilter("at_risk");
+      setSelectedStatus("all");
+    } else if (paramFilter === "stalled") {
+      setSelectedSpecialFilter("stalled");
+      setSelectedStatus("all");
+    } else if (paramStatus) {
+      setSelectedStatus(paramStatus);
+      setSelectedSpecialFilter("all");
+    } else {
+      setSelectedSpecialFilter("all");
+      setSelectedStatus("all");
+    }
+  }, [paramStatus, paramFilter]);
+
+  const now = Date.now();
+
+  // Filter & Sort logic
+  const filteredTasks = tasks.filter((t) => {
+    // 1. Text Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchTitle = t.title.toLowerCase().includes(q) || (t.title_en && t.title_en.toLowerCase().includes(q));
+      const matchDesc = t.description?.toLowerCase().includes(q) || (t.description_en && t.description_en.toLowerCase().includes(q));
+      if (!matchTitle && !matchDesc) return false;
+    }
+
+    // 2. Category Filter
+    if (selectedCategory !== "all" && t.category !== selectedCategory) return false;
+
+    // 3. Status Filter (Supports todo = todo + assigned)
+    if (selectedStatus !== "all") {
+      if (selectedStatus === "todo") {
+        if (t.status !== "todo" && t.status !== "assigned") return false;
+      } else if (t.status !== selectedStatus) {
+        return false;
+      }
+    }
+
+    // 4. Special Filter (Overdue, Issues, At-Risk, Stalled)
+    if (selectedSpecialFilter === "overdue") {
+      const isOverdue = t.deadline && new Date(t.deadline).getTime() < now && t.status !== "completed";
+      if (!isOverdue) return false;
+    } else if (selectedSpecialFilter === "issues") {
+      if (!t.unresolved_issues_count || t.unresolved_issues_count <= 0) return false;
+    } else if (selectedSpecialFilter === "at_risk") {
+      const isAtRisk =
+        t.deadline &&
+        new Date(t.deadline).getTime() >= now &&
+        new Date(t.deadline).getTime() - now < 3 * 86400000 &&
+        t.status !== "completed";
+      if (!isAtRisk) return false;
+    } else if (selectedSpecialFilter === "stalled") {
+      const isStalled =
+        t.status !== "completed" &&
+        now - new Date(t.updated_at || t.created_at).getTime() > 2 * 86400000;
+      if (!isStalled) return false;
+    }
+
+    // 5. Priority Filter
+    if (selectedPriority !== "all" && t.priority !== selectedPriority) return false;
+
+    // 6. Project Filter
+    if (selectedProject !== "all" && t.project_id !== selectedProject) return false;
+
+    return true;
+  }).sort((a, b) => {
+    if (sortBy === "deadline") {
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+    }
+    if (sortBy === "priority") {
+      const pWeights = { urgent: 4, high: 3, medium: 2, low: 1 };
+      return pWeights[b.priority] - pWeights[a.priority];
+    }
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  const clearAllFilters = () => {
+    setSelectedStatus("all");
+    setSelectedSpecialFilter("all");
+    setSelectedCategory("all");
+    setSelectedPriority("all");
+    setSelectedProject("all");
+    setSearchQuery("");
+  };
+
+  const hasActiveFilter =
+    selectedStatus !== "all" ||
+    selectedSpecialFilter !== "all" ||
+    selectedCategory !== "all" ||
+    selectedPriority !== "all" ||
+    selectedProject !== "all" ||
+    searchQuery !== "";
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">{t("tasksTitle")}</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {t("tasksDesc")} ({t("showingTasks", { count: filteredTasks.length })})
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <ViewModeSwitcher currentMode="list" />
+          <Button
+            size="sm"
+            onClick={() => setShowCreateModal(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5 shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{t("createTaskBtn")}</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Active Filter Banner if navigated from Dashboard */}
+      {selectedSpecialFilter !== "all" && (
+        <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs animate-in fade-in">
+          <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200 font-semibold">
+            <AlertCircle className="h-4 w-4 text-rose-600" />
+            <span>
+              {selectedSpecialFilter === "overdue" && (lang === "th" ? "กำลังกรอง: งานที่เกินกำหนดส่ง (Overdue Tasks)" : "Filtering: Overdue Tasks")}
+              {selectedSpecialFilter === "issues" && (lang === "th" ? "กำลังกรอง: งานที่ติดปัญหา (Tasks with Active Blockers)" : "Filtering: Tasks with Blockers")}
+              {selectedSpecialFilter === "at_risk" && (lang === "th" ? "กำลังกรอง: งานเสี่ยงล่าช้าใกล้ครบกำหนด (At-Risk Tasks)" : "Filtering: At-Risk Tasks")}
+              {selectedSpecialFilter === "stalled" && (lang === "th" ? "กำลังกรอง: งานค้างไร้ความเคลื่อนไหว (Stalled Tasks)" : "Filtering: Stalled Tasks")}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAllFilters}
+            className="text-xs h-7 text-rose-700 hover:bg-rose-100 dark:hover:bg-rose-900 gap-1"
+          >
+            <X className="h-3 w-3" />
+            <span>{lang === "th" ? "ล้างตัวกรอง" : "Clear Filter"}</span>
+          </Button>
+        </div>
+      )}
+
+      {selectedStatus !== "all" && selectedSpecialFilter === "all" && (
+        <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center justify-between text-xs animate-in fade-in">
+          <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200 font-semibold">
+            <CheckCircle2 className="h-4 w-4 text-blue-600" />
+            <span>
+              {lang === "th" ? `กำลังกรองตามสถานะ: ${getStatusLabel(selectedStatus as any, lang)}` : `Filtering by Status: ${getStatusLabel(selectedStatus as any, lang)}`}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAllFilters}
+            className="text-xs h-7 text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900 gap-1"
+          >
+            <X className="h-3 w-3" />
+            <span>{lang === "th" ? "ล้างตัวกรอง" : "Clear Filter"}</span>
+          </Button>
+        </div>
+      )}
+
+      {/* Filter Bar */}
+      <div className="p-4 rounded-xl border bg-card shadow-sm space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+          {/* Search */}
+          <div className="relative sm:col-span-2">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={t("searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 text-xs h-9"
+            />
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <Select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="text-xs h-9"
+            >
+              <option value="all">{t("allCategories")}</option>
+              <option value="design">{t("catDesign")}</option>
+              <option value="permit">{t("catPermit")}</option>
+              <option value="site">{t("catSite")}</option>
+              <option value="other">{t("catOther")}</option>
+            </Select>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <Select
+              value={selectedStatus}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setSelectedSpecialFilter("all");
+              }}
+              className="text-xs h-9"
+            >
+              <option value="all">{t("allStatuses")}</option>
+              <option value="todo">{t("stTodo")} / {t("stAssigned")}</option>
+              <option value="in_progress">{t("stInProgress")}</option>
+              <option value="review">{t("stReview")}</option>
+              <option value="completed">{t("stCompleted")}</option>
+            </Select>
+          </div>
+
+          {/* Priority Filter */}
+          <div>
+            <Select
+              value={selectedPriority}
+              onChange={(e) => setSelectedPriority(e.target.value)}
+              className="text-xs h-9"
+            >
+              <option value="all">{t("allPriorities")}</option>
+              <option value="urgent">{t("pUrgent")}</option>
+              <option value="high">{t("pHigh")}</option>
+              <option value="medium">{t("pMedium")}</option>
+              <option value="low">{t("pLow")}</option>
+            </Select>
+          </div>
+        </div>
+
+        {/* Sort and Project selection */}
+        <div className="flex items-center justify-between text-xs pt-2 border-t flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">{t("projectLabel")}</span>
+            <select
+              value={selectedProject}
+              onChange={(e) => setSelectedProject(e.target.value)}
+              className="h-7 text-xs rounded border bg-background px-2"
+            >
+              <option value="all">{t("allProjects")}</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {getLocalizedDynamicText(p.name, p.name_en, lang)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {hasActiveFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAllFilters}
+                className="text-xs h-7 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3 mr-1" />
+                <span>{lang === "th" ? "รีเซ็ตตัวกรองทั้งหมด" : "Reset all"}</span>
+              </Button>
+            )}
+
+            <span className="text-muted-foreground flex items-center gap-1 pl-2 border-l">
+              <ArrowUpDown className="h-3 w-3" /> {t("sortByLabel")}
+            </span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="h-7 text-xs rounded border bg-background px-2 font-medium"
+            >
+              <option value="deadline">{t("sortDeadline")}</option>
+              <option value="priority">{t("sortPriority")}</option>
+              <option value="created_at">{t("sortCreated")}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Task Table */}
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b bg-muted/40 font-semibold text-muted-foreground">
+                <th className="py-3 px-4">{t("tableTitle")}</th>
+                <th className="py-3 px-4">{t("tableProject")}</th>
+                <th className="py-3 px-4">{t("tableStatus")}</th>
+                <th className="py-3 px-4">{t("tablePriority")}</th>
+                <th className="py-3 px-4">{t("tableAssignee")}</th>
+                <th className="py-3 px-4">{t("tableDeadline")}</th>
+                <th className="py-3 px-4 text-right">{t("tableActions")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {filteredTasks.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                    {t("noTasksFound")}
+                  </td>
+                </tr>
+              ) : (
+                filteredTasks.map((task) => {
+                  const isOverdue =
+                    task.deadline &&
+                    new Date(task.deadline).getTime() < Date.now() &&
+                    task.status !== "completed";
+                  const openIssues = task.unresolved_issues_count || 0;
+
+                  const displayTitle = getLocalizedDynamicText(task.title, task.title_en, lang);
+                  const rawProjectName = task.project?.name || "-";
+                  const displayProject = getLocalizedDynamicText(rawProjectName, task.project?.name_en, lang);
+
+                  return (
+                    <tr
+                      key={task.id}
+                      className={`hover:bg-accent/40 transition-colors group ${
+                        isOverdue ? "bg-rose-50/20 dark:bg-rose-950/10" : ""
+                      }`}
+                    >
+                      {/* Title & Issue Alert */}
+                      <td className="py-3 px-4 font-medium">
+                        <div className="space-y-1">
+                          <Link
+                            href={`/tasks/${task.id}`}
+                            className="font-semibold text-foreground hover:text-emerald-600 transition-colors"
+                          >
+                            {displayTitle}
+                          </Link>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {isOverdue && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 text-[10px] font-bold">
+                                <AlertCircle className="h-3 w-3" />
+                                {lang === "th" ? "เกินกำหนดส่ง" : "Overdue"}
+                              </span>
+                            )}
+                            {openIssues > 0 && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
+                                <AlertTriangle className="h-3 w-3" />
+                                {lang === "th" ? `ติดปัญหา ${openIssues} รายการ` : `${openIssues} blockers`}
+                              </span>
+                            )}
+                            {task.permit_details && task.permit_details.revision_round > 0 && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 text-[10px]">
+                                <RefreshCcw className="h-2.5 w-2.5" />
+                                {lang === "th" ? `ตีกลับ ${task.permit_details.revision_round} รอบ` : `Rev: ${task.permit_details.revision_round}`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Project & Category */}
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-foreground">{displayProject}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {getCategoryLabel(task.category, lang)}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            task.status === "completed"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                              : task.status === "review"
+                              ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+                              : task.status === "in_progress"
+                              ? "bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200"
+                              : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200"
+                          }`}
+                        >
+                          {getStatusLabel(task.status, lang)}
+                        </span>
+                      </td>
+
+                      {/* Priority */}
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-2 py-0.5 rounded-full border text-[10px] font-semibold ${getPriorityBadgeColor(
+                            task.priority
+                          )}`}
+                        >
+                          {getPriorityLabel(task.priority, lang)}
+                        </span>
+                      </td>
+
+                      {/* Assignee */}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1.5">
+                          {task.assignees && task.assignees.length > 0 ? (
+                            task.assignees.map((a) => (
+                              <div key={a.id} className="flex items-center gap-1">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarFallback className="text-[9px]">
+                                    {a.full_name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="truncate max-w-[100px] text-[11px]">
+                                  {a.full_name}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground/60 italic text-[11px]">-</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Deadline */}
+                      <td className="py-3 px-4">
+                        <span
+                          className={`font-medium ${
+                            isOverdue
+                              ? "text-rose-600 font-bold"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {formatDate(task.deadline, lang)}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* Quick Attach File Button */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAttachModalTask(task)}
+                            className="text-[11px] h-7 px-2 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 gap-1 font-semibold"
+                            title={lang === "th" ? "แนบไฟล์ผลงาน / แบบแปลน" : "Attach deliverable files"}
+                          >
+                            <Paperclip className="h-3 w-3 text-emerald-600" />
+                            <span>{lang === "th" ? "แนบไฟล์" : "Attach"}</span>
+                          </Button>
+
+                          {/* Quick Log Blocker Button */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIssueModalTask(task)}
+                            className="text-[11px] h-7 px-2 border-rose-400/60 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 gap-1 font-semibold"
+                            title={lang === "th" ? "บันทึกปัญหาที่พบ / จุดติดขัด" : "Log blocker issue"}
+                          >
+                            <ShieldAlert className="h-3 w-3 text-rose-600" />
+                            <span>{lang === "th" ? "+ บันทึกปัญหา" : "+ Issue"}</span>
+                          </Button>
+
+                          {/* View Details Link */}
+                          <Link href={`/tasks/${task.id}`}>
+                            <Button variant="outline" size="sm" className="text-xs h-7 px-2 text-foreground">
+                              {t("viewDetails")}
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Create Task Modal */}
+      {showCreateModal && (
+        <CreateTaskModal
+          open={showCreateModal}
+          onOpenChange={setShowCreateModal}
+        />
+      )}
+
+      {/* Quick Log Issue Modal */}
+      {issueModalTask && (
+        <QuickLogIssueModal
+          task={issueModalTask}
+          open={Boolean(issueModalTask)}
+          onOpenChange={(open) => {
+            if (!open) setIssueModalTask(null);
+          }}
+        />
+      )}
+
+      {/* Quick Attach Deliverable Modal */}
+      {attachModalTask && (
+        <QuickAttachModal
+          task={attachModalTask}
+          open={Boolean(attachModalTask)}
+          onOpenChange={(open) => {
+            if (!open) setAttachModalTask(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function TasksListPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-muted-foreground">Loading tasks...</div>}>
+      <TasksListContent />
+    </Suspense>
+  );
+}
