@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Task } from "@/lib/types/database.types";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -28,6 +29,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onDragStart }: TaskCardProps) {
+  const router = useRouter();
   const { lang, t } = useLanguage();
   const isOverdue = task.deadline && new Date(task.deadline).getTime() < Date.now() && task.status !== "completed";
   const isDueSoon =
@@ -46,7 +48,8 @@ export function TaskCard({ task, onDragStart }: TaskCardProps) {
     <div
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart && onDragStart(e, task)}
-      className={`group relative rounded-xl border bg-card p-3.5 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-border/80 hover:border-emerald-500/50 flex flex-col justify-between gap-2.5 ${
+      onClick={() => router.push(`/tasks/${task.id}`)}
+      className={`group relative rounded-xl border bg-card p-3.5 shadow-sm hover:shadow-md hover:border-emerald-500/50 hover:bg-emerald-50/15 dark:hover:bg-emerald-950/10 transition-all cursor-pointer border-border/80 flex flex-col justify-between gap-2.5 ${
         unresolvedIssues > 0 ? "border-rose-300 dark:border-rose-800/80" : ""
       }`}
     >
@@ -72,13 +75,12 @@ export function TaskCard({ task, onDragStart }: TaskCardProps) {
         </span>
       </div>
 
-      {/* Task Title Link */}
-      <Link
-        href={`/tasks/${task.id}`}
-        className="text-xs font-semibold text-foreground hover:text-emerald-600 transition-colors line-clamp-2 leading-relaxed"
+      {/* Task Title */}
+      <span
+        className="text-xs font-semibold text-foreground group-hover:text-emerald-600 transition-colors line-clamp-2 leading-relaxed block"
       >
         {displayTitle}
-      </Link>
+      </span>
 
       {/* Section 3.7: Blocker / Issue Alert Tag (Pulsing Red Urgent Alert) */}
       {unresolvedIssues > 0 && (

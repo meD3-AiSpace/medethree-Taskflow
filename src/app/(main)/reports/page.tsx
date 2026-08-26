@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import {
 type TimeRangePreset = "this_week" | "last_week" | "this_month" | "last_month" | "custom";
 
 export default function ExecutiveReportsPage() {
+  const router = useRouter();
   const { tasks, projects, users, issues, timeEntries, attachments, currentUser } = useTaskStore();
   const { t, lang } = useLanguage();
 
@@ -432,8 +434,12 @@ export default function ExecutiveReportsPage() {
                 const displayProject = getLocalizedDynamicText(t.project?.name || "", t.project?.name_en, lang);
 
                 return (
-                  <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                    <td className="py-3 px-4 font-semibold text-foreground">{displayTitle}</td>
+                  <tr
+                    key={t.id}
+                    onClick={() => router.push(`/tasks/${t.id}`)}
+                    className="hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all cursor-pointer group"
+                  >
+                    <td className="py-3 px-4 font-semibold text-foreground group-hover:text-emerald-600 transition-colors">{displayTitle}</td>
                     <td className="py-3 px-4 text-muted-foreground">{displayProject}</td>
                     <td className="py-3 px-4">{getCategoryLabel(t.category, lang)}</td>
                     <td className="py-3 px-4">

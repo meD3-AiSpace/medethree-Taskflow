@@ -64,7 +64,6 @@ export default function TaskDetailPage() {
     updateTaskDetails,
     deleteTask,
     currentUser,
-    geminiApiKey,
   } = useTaskStore();
 
   const task = tasks.find((t) => t.id === taskId);
@@ -98,7 +97,7 @@ export default function TaskDetailPage() {
   const handleTranslateComment = async () => {
     if (!commentInput.trim()) return;
     setIsTranslatingComment(true);
-    const res = await translateText(commentInput, geminiApiKey);
+    const res = await translateText(commentInput);
     setCommentInputEn(res.translatedText);
     setIsTranslatingComment(false);
   };
@@ -320,144 +319,158 @@ export default function TaskDetailPage() {
           </p>
         </div>
 
-        {/* Feature Tabs: Issues, Deliverables, Time Tracking, Permit, Comments, Activity Log */}
-        <Tabs defaultValue="issues" className="w-full">
-          <TabsList className="flex items-center gap-1 w-full h-auto p-1 bg-muted/60 rounded-xl overflow-x-auto flex-wrap sm:flex-nowrap">
-            <TabsTrigger value="issues" className="text-xs gap-1.5 flex-1 min-w-[120px]">
-              <ShieldAlert className="h-3.5 w-3.5" />
-              <span>{t("tabIssues")} ({task.unresolved_issues_count || 0})</span>
+        {/* Feature Tabs: Consolidated 3 Unified Workspace Tabs (Dimension 3 Lean) */}
+        <Tabs defaultValue="deliverables" className="w-full">
+          <TabsList className="flex items-center gap-1.5 w-full h-auto p-1 bg-muted/60 rounded-xl overflow-x-auto">
+            {/* Tab 1: Deliverables & Comments */}
+            <TabsTrigger value="deliverables" className="text-xs gap-1.5 flex-1 py-2 font-medium">
+              <Paperclip className="h-4 w-4 text-emerald-600" />
+              <span>{lang === "th" ? "📁 ผลงาน & ข้อคิดเห็น" : "Deliverables & Notes"}</span>
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">
+                {taskAttachments.length + taskComments.length}
+              </span>
             </TabsTrigger>
 
-            <TabsTrigger value="attachments" className="text-xs gap-1.5 flex-1 min-w-[130px]">
-              <Paperclip className="h-3.5 w-3.5 text-emerald-600" />
-              <span>{lang === "th" ? "ไฟล์ผลงาน" : "Deliverables"} ({taskAttachments.length})</span>
+            {/* Tab 2: Issues & Work Log */}
+            <TabsTrigger value="support" className="text-xs gap-1.5 flex-1 py-2 font-medium">
+              <ShieldAlert className="h-4 w-4 text-rose-500" />
+              <span>{lang === "th" ? "🛡️ ปัญหาติดขัด & บันทึกเวลา" : "Blockers & Work Log"}</span>
+              {(task.unresolved_issues_count || 0) > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
+                  {task.unresolved_issues_count}
+                </span>
+              )}
             </TabsTrigger>
 
-            <TabsTrigger value="timelog" className="text-xs gap-1.5 flex-1 min-w-[130px]">
-              <Clock className="h-3.5 w-3.5 text-amber-500" />
-              <span>{lang === "th" ? "บันทึกเวลา" : "Work Log"} ({totalHours}h)</span>
-            </TabsTrigger>
-
-            {task.category === "permit" && (
-              <TabsTrigger value="permit" className="text-xs gap-1.5 flex-1 min-w-[120px]">
-                <FileCheck2 className="h-3.5 w-3.5 text-blue-600" />
-                <span>{t("tabPermit")}</span>
-              </TabsTrigger>
-            )}
-
-            <TabsTrigger value="comments" className="text-xs gap-1.5 flex-1 min-w-[110px]">
-              <MessageSquare className="h-3.5 w-3.5" />
-              <span>{t("tabComments")} ({taskComments.length})</span>
-            </TabsTrigger>
-
-            <TabsTrigger value="activity" className="text-xs gap-1.5 flex-1 min-w-[100px]">
-              <History className="h-3.5 w-3.5" />
-              <span>{t("tabActivity")}</span>
+            {/* Tab 3: Permit & History */}
+            <TabsTrigger value="history" className="text-xs gap-1.5 flex-1 py-2 font-medium">
+              <History className="h-4 w-4 text-blue-500" />
+              <span>{lang === "th" ? "📜 รายละเอียด & ประวัติ" : "Details & History"}</span>
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Issues (Section 3.7) */}
-          <TabsContent value="issues" className="pt-4">
-            <IssueSection taskId={task.id} />
-          </TabsContent>
-
-          {/* Tab 2: Deliverables & Attachments with Auto-Compression (Phase 2 & Section 3.5) */}
-          <TabsContent value="attachments" className="pt-4">
-            <DeliverablesAttachmentSection taskId={task.id} />
-          </TabsContent>
-
-          {/* Tab 3: Friendly Time Tracking & Work Log (Phase 2 & Section 3.9) */}
-          <TabsContent value="timelog" className="pt-4">
-            <TimeTrackingSection taskId={task.id} />
-          </TabsContent>
-
-          {/* Tab 4: Permit Details (Section 3.8) */}
-          {task.category === "permit" && (
-            <TabsContent value="permit" className="pt-4">
-              <PermitSection task={task} />
-            </TabsContent>
-          )}
-
-          {/* Tab 5: Comments & Discussion */}
-          <TabsContent value="comments" className="pt-4 space-y-4">
+          {/* TAB 1: Unified Deliverables & Discussion Workspace */}
+          <TabsContent value="deliverables" className="pt-4 space-y-6">
+            {/* Deliverables Dropzone & Files Grid */}
             <div className="space-y-3">
-              {taskComments.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-6 text-center italic">
-                  {lang === "th" ? "ยังไม่มีคอมเมนต์พูดคุยในงานนี้" : "No comments or discussion yet"}
-                </p>
-              ) : (
-                taskComments.map((comm) => {
-                  const displayComment = getLocalizedDynamicText(comm.content, comm.content_en, lang);
-                  return (
-                    <div key={comm.id} className="p-3.5 rounded-xl border bg-background text-xs space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                        <strong className="text-foreground">{comm.user?.full_name || (lang === "th" ? "สมาชิกในทีม" : "Team Member")}</strong>
-                        <span>{formatDateTime(comm.created_at, lang)}</span>
-                      </div>
-                      <p className="text-foreground leading-relaxed">{displayComment}</p>
-                    </div>
-                  );
-                })
-              )}
+              <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5 text-emerald-600" />
+                <span>{lang === "th" ? "ไฟล์ผลงาน & เอกสารส่งมอบ (Deliverables)" : "Deliverables & Attachments"}</span>
+              </h3>
+              <DeliverablesAttachmentSection taskId={task.id} />
             </div>
 
-            {/* Add Comment Form */}
-            <form onSubmit={handleAddComment} className="pt-3 border-t space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold">
-                  {lang === "th" ? "บันทึกคอมเมนต์สรุปผลงาน:" : "Add Comment / Output Summary:"}
-                </label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleTranslateComment}
-                  disabled={isTranslatingComment || !commentInput.trim()}
-                  className="text-xs h-6 gap-1 border-emerald-500/60 text-emerald-700 dark:text-emerald-300"
-                >
-                  <Sparkles className="h-2.5 w-2.5" />
-                  <span>{isTranslatingComment ? "กำลังแปล..." : "✨ แปลอังกฤษ"}</span>
-                </Button>
+            {/* Comments & Output Discussion */}
+            <div className="space-y-3 pt-4 border-t">
+              <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5 text-blue-600" />
+                <span>{lang === "th" ? "ข้อคิดเห็น & บันทึกสรุปงาน (Comments & Discussion)" : "Comments & Discussion"}</span>
+                <span className="text-[11px] text-muted-foreground font-normal">({taskComments.length})</span>
+              </h3>
+
+              <div className="space-y-2.5">
+                {taskComments.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center italic bg-muted/20 rounded-lg border border-dashed">
+                    {lang === "th" ? "ยังไม่มีข้อคิดเห็นในงานนี้ — พิมพ์บันทึกข้อความสรุปผลงานด้านล่างได้เลย" : "No comments yet — submit summary notes below"}
+                  </p>
+                ) : (
+                  taskComments.map((comm) => {
+                    const displayComment = getLocalizedDynamicText(comm.content, comm.content_en, lang);
+                    return (
+                      <div key={comm.id} className="p-3.5 rounded-xl border bg-background text-xs space-y-1.5 shadow-2xs">
+                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                          <strong className="text-foreground">{comm.user?.full_name || (lang === "th" ? "สมาชิกในทีม" : "Team Member")}</strong>
+                          <span>{formatDateTime(comm.created_at, lang)}</span>
+                        </div>
+                        <p className="text-foreground leading-relaxed">{displayComment}</p>
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
-              <Textarea
-                rows={3}
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                placeholder={lang === "th" ? "พิมพ์ข้อความสรุปผลงาน ลิงก์ไฟล์งาน หรือข้อคิดเห็น..." : "Write summary, deliverables link, or discussion..."}
-                className="text-xs"
-              />
-
-              {commentInputEn && (
-                <div className="p-2 rounded bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px]">
-                  <span className="text-emerald-800 dark:text-emerald-300 font-semibold block mb-0.5">
-                    🇬🇧 English Translation (AI):
-                  </span>
-                  <Textarea
-                    rows={2}
-                    value={commentInputEn}
-                    onChange={(e) => setCommentInputEn(e.target.value)}
-                    className="text-xs bg-background"
-                  />
+              {/* Add Comment Form */}
+              <form onSubmit={handleAddComment} className="pt-3 border-t space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-muted-foreground">
+                    {lang === "th" ? "พิมพ์ข้อความสรุปงาน หรือประสานงาน:" : "Add Comment / Output Summary:"}
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleTranslateComment}
+                    disabled={isTranslatingComment || !commentInput.trim()}
+                    className="text-xs h-6 gap-1 border-emerald-500/60 text-emerald-700 dark:text-emerald-300"
+                  >
+                    <Sparkles className="h-2.5 w-2.5" />
+                    <span>{isTranslatingComment ? "กำลังแปล..." : "✨ แปลอังกฤษ"}</span>
+                  </Button>
                 </div>
-              )}
 
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  <span>{lang === "th" ? "ส่งคอมเมนต์ / ผลงาน" : "Submit Comment / Deliverable"}</span>
-                </Button>
-              </div>
-            </form>
+                <Textarea
+                  rows={3}
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  placeholder={lang === "th" ? "พิมพ์ข้อความสรุปผลงาน ลิงก์ไฟล์งาน หรือข้อคิดเห็น..." : "Write summary, deliverables link, or discussion..."}
+                  className="text-xs"
+                />
+
+                {commentInputEn && (
+                  <div className="p-2.5 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px]">
+                    <span className="text-emerald-800 dark:text-emerald-300 font-semibold block mb-1">
+                      🇬🇧 English Translation (AI):
+                    </span>
+                    <Textarea
+                      rows={2}
+                      value={commentInputEn}
+                      onChange={(e) => setCommentInputEn(e.target.value)}
+                      className="text-xs bg-background"
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-xs"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    <span>{lang === "th" ? "ส่งข้อความ / ผลงาน" : "Post Note"}</span>
+                  </Button>
+                </div>
+              </form>
+            </div>
           </TabsContent>
 
-          {/* Tab 6: Activity Log (Section 3.5) */}
-          <TabsContent value="activity" className="pt-4">
-            <ActivityTimeline taskId={task.id} />
+          {/* TAB 2: Unified Support & Work Log (Blockers + Time Tracking) */}
+          <TabsContent value="support" className="pt-4 space-y-6">
+            {/* Blocker / Clash Reporting */}
+            <div className="space-y-2.5">
+              <IssueSection taskId={task.id} />
+            </div>
+
+            {/* Friendly Time Tracking & Work Log */}
+            <div className="pt-4 border-t space-y-2.5">
+              <TimeTrackingSection taskId={task.id} />
+            </div>
+          </TabsContent>
+
+          {/* TAB 3: Permit Details (if applicable) & Activity Timeline */}
+          <TabsContent value="history" className="pt-4 space-y-6">
+            {task.category === "permit" && (
+              <div className="space-y-3">
+                <PermitSection task={task} />
+              </div>
+            )}
+
+            <div className={task.category === "permit" ? "pt-4 border-t space-y-3" : "space-y-3"}>
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                {lang === "th" ? "ประวัติการเคลื่อนไหวของงาน (Activity Timeline)" : "Activity Timeline"}
+              </h3>
+              <ActivityTimeline taskId={task.id} />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

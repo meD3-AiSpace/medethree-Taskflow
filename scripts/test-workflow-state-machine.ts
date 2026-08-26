@@ -239,15 +239,15 @@ console.log("===================================================================
 
 let passedCount = 0;
 let failedCount = 0;
-
 for (const tc of testCases) {
   const result = validateStateTransition({
-    task: tc.input.task as any,
+    currentStatus: tc.input.task?.status || "todo",
     targetStatus: tc.input.targetStatus,
-    userRole: tc.input.userRole,
-    userId: tc.input.userId,
-    hasOutputCommentOrAttachment: tc.input.hasOutputCommentOrAttachment,
-    hasAssigneeAndDeadline: tc.input.hasAssigneeAndDeadline,
+    deadlineSet: !!tc.input.task?.deadline || !!tc.input.hasAssigneeAndDeadline,
+    assigneeIds: (tc.input.task?.assignees || []).map((a: any) => a.id),
+    actorId: tc.input.userId || "u-1",
+    actorRole: tc.input.userRole || "member",
+    evidenceCount: (tc.input.task?.comments_count || 0) + (tc.input.hasOutputCommentOrAttachment ? 1 : 0),
   });
 
   const isAllowedMatch = result.allowed === tc.expected.allowed;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,10 @@ import {
   AlertTriangle,
   ShieldAlert,
   Paperclip,
+  UserCheck,
 } from "lucide-react";
 import {
+  cn,
   formatDate,
   getCategoryLabel,
   getPriorityBadgeColor,
@@ -40,8 +42,9 @@ import { ViewModeSwitcher } from "@/components/tasks/view-mode-switcher";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 
 function TasksListContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const { tasks, projects, users } = useTaskStore();
+  const { tasks, projects, users, currentUser } = useTaskStore();
   const { t, lang } = useLanguage();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [issueModalTask, setIssueModalTask] = useState<any>(null);
@@ -59,10 +62,15 @@ function TasksListContent() {
   const [selectedPriority, setSelectedPriority] = useState("all");
   const [selectedProject, setSelectedProject] = useState("all");
   const [sortBy, setSortBy] = useState<"deadline" | "priority" | "created_at">("deadline");
+  const [onlyMyTasks, setOnlyMyTasks] = useState(false);
 
   // Sync from URL params on load or change
   useEffect(() => {
-    if (paramFilter === "overdue") {
+    if (paramFilter === "my_tasks") {
+      setOnlyMyTasks(true);
+      setSelectedSpecialFilter("all");
+      setSelectedStatus("all");
+    } else if (paramFilter === "overdue") {
       setSelectedSpecialFilter("overdue");
       setSelectedStatus("all");
     } else if (paramFilter === "issues") {
@@ -87,6 +95,12 @@ function TasksListContent() {
 
   // Filter & Sort logic
   const filteredTasks = tasks.filter((t) => {
+    // 0. Only My Tasks Filter
+    if (onlyMyTasks) {
+      const isMine = t.assignees?.some((a) => a.id === currentUser.id);
+      if (!isMine) return false;
+    }
+
     // 1. Text Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -175,6 +189,22 @@ function TasksListContent() {
           </p>
         </div>
         <div className="flex items-center gap-2.5 flex-wrap">
+          <Button
+            type="button"
+            variant={onlyMyTasks ? "default" : "outline"}
+            size="sm"
+            onClick={() => setOnlyMyTasks(!onlyMyTasks)}
+            className={cn(
+              "text-xs h-9 gap-1.5 font-semibold transition-all shadow-2xs",
+              onlyMyTasks
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-sm"
+                : "text-foreground hover:bg-accent"
+            )}
+          >
+            <UserCheck className="h-4 w-4" />
+            <span>{lang === "th" ? "🎯 งานของฉัน" : "My Tasks"}</span>
+          </Button>
+
           <ViewModeSwitcher currentMode="list" />
           <Button
             size="sm"
@@ -379,19 +409,19 @@ function TasksListContent() {
                   return (
                     <tr
                       key={task.id}
-                      className={`hover:bg-accent/40 transition-colors group ${
+                      onClick={() => router.push(`/tasks/${task.id}`)}
+                      className={`hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all cursor-pointer group border-b ${
                         isOverdue ? "bg-rose-50/20 dark:bg-rose-950/10" : ""
                       }`}
                     >
                       {/* Title & Issue Alert */}
                       <td className="py-3 px-4 font-medium">
                         <div className="space-y-1">
-                          <Link
-                            href={`/tasks/${task.id}`}
-                            className="font-semibold text-foreground hover:text-emerald-600 transition-colors"
+                          <span
+                            className="font-semibold text-foreground group-hover:text-emerald-600 transition-colors block"
                           >
                             {displayTitle}
-                          </Link>
+                          </span>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {isOverdue && (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 text-[10px] font-bold">
@@ -494,8 +524,11 @@ function TasksListContent() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => setAttachModalTask(task)}
-                            className="text-[11px] h-7 px-2 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 gap-1 font-semibold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAttachModalTask(task);
+                            }}
+                            className="text-[11px] h-7 px-2 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 gap-1 font-semibold cursor-pointer"
                             title={lang === "th" ? "แนบไฟล์ผลงาน / แบบแปลน" : "Attach deliverable files"}
                           >
                             <Paperclip className="h-3 w-3 text-emerald-600" />
@@ -507,20 +540,30 @@ function TasksListContent() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => setIssueModalTask(task)}
-                            className="text-[11px] h-7 px-2 border-rose-400/60 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 gap-1 font-semibold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIssueModalTask(task);
+                            }}
+                            className="text-[11px] h-7 px-2 border-rose-400/60 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 gap-1 font-semibold cursor-pointer"
                             title={lang === "th" ? "บันทึกปัญหาที่พบ / จุดติดขัด" : "Log blocker issue"}
                           >
                             <ShieldAlert className="h-3 w-3 text-rose-600" />
                             <span>{lang === "th" ? "+ บันทึกปัญหา" : "+ Issue"}</span>
                           </Button>
 
-                          {/* View Details Link */}
-                          <Link href={`/tasks/${task.id}`}>
-                            <Button variant="outline" size="sm" className="text-xs h-7 px-2 text-foreground">
-                              {t("viewDetails")}
-                            </Button>
-                          </Link>
+                          {/* View Details Button */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/tasks/${task.id}`);
+                            }}
+                            className="text-xs h-7 px-2 text-foreground group-hover:bg-emerald-600 group-hover:text-white transition-colors cursor-pointer"
+                          >
+                            {t("viewDetails")}
+                          </Button>
                         </div>
                       </td>
                     </tr>

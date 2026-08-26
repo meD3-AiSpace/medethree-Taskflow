@@ -23,7 +23,6 @@ export function AIExecutiveBriefing({
   periodLabel,
   lang,
 }: AIExecutiveBriefingProps) {
-  const { geminiApiKey } = useTaskStore();
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -125,68 +124,37 @@ export function AIExecutiveBriefing({
     setIsLoading(true);
 
     try {
-      if (geminiApiKey) {
-        // Real Gemini API Call with language-aware prompt
-        const prompt =
-          lang === "en"
-            ? `You are an Executive Project Director at MedTree Design & Build (Architecture & Construction).
-Please analyze the operational data for the reporting period: "${periodLabel}"
-- Total Tasks: ${tasks.length} (Completed: ${completedTasks.length})
-- Completed Task Titles: ${completedTasks.map((t) => t.title_en || t.title).join(", ") || "None"}
-- Active Blockers: ${activeIssues.map((i) => i.issue_description_en || i.issue_description).join("; ") || "None"}
-- Total Logged Hours: ${totalHours} hours
+      const topDoneTitles = completedTasks.map((t) => (lang === "en" ? t.title_en || t.title : t.title)).join(", ");
+      const topIssues = activeIssues.map((i) => (lang === "en" ? i.issue_description_en || i.issue_description : i.issue_description)).join("; ");
 
-Please respond in JSON ONLY (with fluent, professional English) following this exact structure:
-{
-  "achievements": ["Key accomplishment bullet 1", "Key accomplishment bullet 2", "Key accomplishment bullet 3"],
-  "risks": ["Critical risk/blocker bullet 1", "Critical risk/blocker bullet 2"],
-  "nextSteps": ["Strategic actionable next step 1", "Strategic actionable next step 2", "Strategic actionable next step 3"]
-}`
-            : `คุณคือผู้เชี่ยวชาญด้านการจัดการสถาปัตยกรรมและการก่อสร้าง (Executive Project Director) ของบริษัท MedTree Design & Build
-กรุณาวิเคราะห์ข้อมูลการดำเนินงานประจำช่วงเวลา: "${periodLabel}"
-- งานทั้งหมด: ${tasks.length} งาน (ปิดแล้ว: ${completedTasks.length} งาน)
-- รายชื่องานที่ปิดแล้ว: ${completedTasks.map((t) => t.title).join(", ") || "ไม่มี"}
-- ปัญหาที่ติดขัดอยู่ (Active Blockers): ${activeIssues.map((i) => i.issue_description).join("; ") || "ไม่มีปัญหาติดขัด"}
-- ชั่วโมงทำงานรวม: ${totalHours} ชั่วโมง
+      const res = await fetch("/api/reports/briefing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          periodLabel,
+          tasksCount: tasks.length,
+          completedCount: completedTasks.length,
+          completedTitles: topDoneTitles,
+          blockersList: topIssues,
+          totalHours,
+          lang,
+        }),
+      });
 
-โปรดสรุปผลการวิเคราะห์ในรูปแบบ JSON ภาษาไทยเท่านั้น โดยมีโครงสร้าง:
-{
-  "achievements": ["ข้อความสรุปผลงานเด่น 1-3 ข้อ"],
-  "risks": ["ข้อความจุดเสี่ยง/ปัญหาที่ต้องระวัง 1-2 ข้อ"],
-  "nextSteps": ["ข้อเสนอแนะแผนปฏิบัติการสัปดาห์ถัดไป 2-3 ข้อ"]
-}`;
-
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: "application/json" },
-            }),
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (jsonText) {
-            const parsed = JSON.parse(jsonText);
-            if (parsed.achievements && parsed.risks && parsed.nextSteps) {
-              setBriefing(parsed);
-              setIsLoading(false);
-              return;
-            }
-          }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.briefing) {
+          setBriefing(data.briefing);
+          setIsLoading(false);
+          return;
         }
       }
 
-      // Intelligent Fallback Generator if no API key or network delay
+      // Fallback Generator
       setTimeout(() => {
         setBriefing(generateDefaultBriefing(lang));
         setIsLoading(false);
-      }, 700);
+      }, 500);
     } catch (err) {
       console.error(err);
       setBriefing(generateDefaultBriefing(lang));
@@ -231,7 +199,7 @@ ${briefing.nextSteps.map((n, i) => `${i + 1}. ${n}`).join("\n")}
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground">
-              {lang === "th" ? "บทวิเคราะห์และสรุปผลผู้บริหารด้วย AI (AI Executive Briefing)" : "AI Executive Briefing & Analysis"}
+              {lang === "th" ? "บทวิเคราะห์และสรุปผลผู้บริหาร (MeD3 AI Briefing)" : "MeD3 Executive Briefing & Analysis"}
             </h3>
             <p className="text-[11px] text-muted-foreground">
               {lang === "th"
@@ -258,10 +226,18 @@ ${briefing.nextSteps.map((n, i) => `${i + 1}. ${n}`).join("\n")}
             size="sm"
             onClick={handleGenerateAIBriefing}
             disabled={isLoading}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 gap-1.5 shadow-xs"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 gap-1.5 shadow-xs cursor-pointer font-medium"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
-            <span>{isLoading ? (lang === "th" ? "กำลังประมวลผล..." : "Analyzing...") : (lang === "th" ? "🤖 วิเคราะห์ใหม่ด้วย AI" : "Regenerate AI")}</span>
+            <span>
+              {isLoading
+                ? lang === "th"
+                  ? "MeD3 กำลังวิเคราะห์..."
+                  : "MeD3 Analyzing..."
+                : lang === "th"
+                ? "✨ MeD3ช่วยวิเคราะห์"
+                : "✨ MeD3 Analysis"}
+            </span>
           </Button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { UserProfile, Task, TimeEntry } from "@/lib/types/database.types";
 import { Language } from "@/lib/i18n/translations";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -19,6 +20,7 @@ export function TeamWorkloadTable({
   timeEntries,
   lang,
 }: TeamWorkloadTableProps) {
+  const router = useRouter();
   const memberStats = users.map((user) => {
     // Tasks assigned to this user
     const assignedTasks = tasks.filter((t) =>
@@ -72,7 +74,11 @@ export function TeamWorkloadTable({
           </thead>
           <tbody className="divide-y">
             {memberStats.map((m) => (
-              <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+              <tr
+                key={m.id}
+                onClick={() => router.push(`/tasks?assignee=${m.id}`)}
+                className="hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all cursor-pointer group"
+              >
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2.5">
                     <Avatar className="h-7 w-7">

@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { Button } from "@/components/ui/button";
+import { LighthouseLogo } from "@/components/ui/lighthouse-logo";
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -30,8 +31,16 @@ interface SidebarProps {
 
 export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { tasks, issues, notifications, currentUser } = useTaskStore();
   const { t, lang } = useLanguage();
+
+  // Auto-close mobile menu when pathname changes
+  useEffect(() => {
+    if (mobileOpen && onCloseMobile) {
+      onCloseMobile();
+    }
+  }, [pathname]);
 
   const unresolvedIssuesCount = issues.filter((i) => !i.is_resolved).length;
   const unreadNotifsCount = notifications.filter((n) => !n.is_read).length;
@@ -44,25 +53,11 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       icon: LayoutDashboard,
     },
     {
-      label: t("navBoard"),
-      href: "/board",
-      icon: Kanban,
-    },
-    {
-      label: t("navTasks"),
+      label: lang === "th" ? "กระดานติดตามงาน (Tasks)" : "Task Management",
       href: "/tasks",
       icon: CheckSquare,
       badge: tasks.length,
-    },
-    {
-      label: lang === "th" ? "ปฏิทินงาน" : "Calendar",
-      href: "/calendar",
-      icon: Calendar,
-    },
-    {
-      label: t("navMyTasks"),
-      href: "/my-tasks",
-      icon: ListTodo,
+      activeMatch: ["/tasks", "/board", "/calendar", "/my-tasks"],
     },
     {
       label: t("navPermits"),
@@ -72,7 +67,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       highlight: true,
     },
     {
-      label: lang === "th" ? "รายงานสรุป" : "Reports",
+      label: lang === "th" ? "รายงานสรุป (Reports)" : "Reports & Analytics",
       href: "/reports",
       icon: FileSpreadsheet,
     },
@@ -101,27 +96,16 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       {/* Sidebar Container: Fixed on Mobile Drawer, Static on Desktop */}
       <aside
         className={cn(
-          "w-64 border-r bg-card h-screen flex flex-col shrink-0 select-none z-50 transition-transform duration-300 ease-in-out",
+          "w-64 border-r bg-card h-screen flex flex-col shrink-0 z-40 transition-transform duration-300 ease-in-out",
           "fixed md:static inset-y-0 left-0",
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         )}
       >
         {/* Brand Header */}
-        <div className="h-16 border-b flex items-center justify-between px-5 gap-3">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
-              <Layers className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="font-bold text-sm leading-tight text-foreground flex items-center gap-1.5">
-                {t("appName")}
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold px-1.5 py-0.5 rounded">
-                  {t("phase1Badge")}
-                </span>
-              </h1>
-              <p className="text-[11px] text-muted-foreground">{t("tagline")}</p>
-            </div>
-          </div>
+        <div className="h-16 border-b flex items-center justify-between px-4 gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer group">
+            <LighthouseLogo size="sm" showText={true} />
+          </Link>
 
           {/* Close button on mobile */}
           {onCloseMobile && (
@@ -129,7 +113,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
               variant="ghost"
               size="icon"
               onClick={onCloseMobile}
-              className="md:hidden h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="md:hidden h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
             >
               <X className="h-5 w-5" />
             </Button>
@@ -143,15 +127,21 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
           </div>
 
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            const isActive = item.activeMatch
+              ? item.activeMatch.some((p) => pathname === p || (p !== "/" && pathname.startsWith(p + "/")))
+              : pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
             const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={onCloseMobile}
+                onClick={() => {
+                  if (mobileOpen && onCloseMobile) {
+                    onCloseMobile();
+                  }
+                }}
                 className={cn(
-                  "flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group",
+                  "flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group cursor-pointer",
                   isActive
                     ? "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 font-semibold"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"

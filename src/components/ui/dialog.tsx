@@ -11,17 +11,31 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onOpenChange(false);
+      }
+    };
+    if (open) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onOpenChange]);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity cursor-pointer"
         onClick={() => onOpenChange(false)}
       />
       {/* Content Container */}
-      <div className="relative z-50 w-full max-w-lg p-4 max-h-[90vh] overflow-y-auto">
+      <div className="relative z-50 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         {children}
       </div>
     </div>

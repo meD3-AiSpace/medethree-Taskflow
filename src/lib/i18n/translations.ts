@@ -7,10 +7,12 @@ export type Language = 'th' | 'en';
 export const translations = {
   th: {
     // Brand & App
-    appName: "TaskFlow Manager",
-    appSubtitle: "ระบบติดตามงานและการทำงานร่วมกัน",
-    tagline: "Operational Visibility",
-    phase1Badge: "Phase 1",
+    appName: "Lighthouse",
+    appSubBrand: "TaskFlow",
+    appSubtitle: "ระบบติดตามงานและบริหารบุคลากร",
+    tagline: "ประภาคารนำทางความสำเร็จในการบริหารงาน",
+    appPhilosophy: "ประภาคารที่นำแสงไฟสู่เรือที่กำลังหลงทางกลางพายุที่มืดมิด เปรียบเสมือนบริษัทที่กำลังมองหาวิธีการแก้ปัญหาในการบริหารงานบุคคล การบริหารบุคคลที่ดี บริษัทก็ดำเนินงานได้ประสบความสำเร็จ",
+    phase1Badge: "v2.1",
 
     // Navigation
     navMenu: "เมนูหลัก",
@@ -213,10 +215,12 @@ export const translations = {
   },
   en: {
     // Brand & App
-    appName: "TaskFlow Manager",
-    appSubtitle: "Task Tracking & Collaboration System",
-    tagline: "Operational Visibility",
-    phase1Badge: "Phase 1",
+    appName: "Lighthouse",
+    appSubBrand: "TaskFlow",
+    appSubtitle: "People & Project Management Platform",
+    tagline: "Guiding Beacon for People & Operational Success",
+    appPhilosophy: "A guiding beacon that leads ships through dark storms, symbolizing organizations seeking clarity in people management—for when people thrive, the enterprise succeeds.",
+    phase1Badge: "v2.1",
 
     // Navigation
     navMenu: "MAIN MENU",

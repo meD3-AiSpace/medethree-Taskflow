@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { UserProfile, UserRole } from "@/lib/types/database.types";
@@ -31,6 +32,7 @@ import {
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 
 export default function TeamsPage() {
+  const router = useRouter();
   const {
     teams,
     users,
@@ -384,10 +386,11 @@ export default function TeamsPage() {
                       return (
                         <div
                           key={member.id}
-                          className={`flex items-center justify-between p-2.5 rounded-xl border transition-all text-xs ${
+                          onClick={() => router.push(`/tasks?assignee=${member.id}`)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl border transition-all text-xs cursor-pointer group hover:shadow-xs hover:border-emerald-500/50 ${
                             isCurrent
                               ? "bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 shadow-xs"
-                              : "bg-background hover:bg-muted/40 border-border"
+                              : "bg-background hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 border-border"
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -398,7 +401,7 @@ export default function TeamsPage() {
                             </Avatar>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-foreground truncate max-w-[160px]">
+                                <span className="font-bold text-foreground group-hover:text-emerald-600 transition-colors truncate max-w-[160px]">
                                   {displayMemberName}
                                 </span>
                                 {isCurrent && (
@@ -427,10 +430,10 @@ export default function TeamsPage() {
                             <Badge
                               variant={
                                 member.role === "admin"
-                                  ? "default"
-                                  : member.role === "manager"
-                                  ? "high"
-                                  : "medium"
+                                    ? "default"
+                                    : member.role === "manager"
+                                    ? "high"
+                                    : "medium"
                               }
                               className="text-[9px] uppercase font-bold"
                             >
@@ -440,8 +443,11 @@ export default function TeamsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleOpenEditUser(member)}
-                              className="h-6 w-6 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditUser(member);
+                              }}
+                              className="h-6 w-6 p-0 cursor-pointer"
                               title={lang === "th" ? "แก้ไขชื่อ / สิทธิ์" : "Edit user/role"}
                             >
                               <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
@@ -451,8 +457,11 @@ export default function TeamsPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleDeleteUser(member)}
-                                className="h-6 w-6 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteUser(member);
+                                }}
+                                className="h-6 w-6 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
                                 title={lang === "th" ? "ลบสมาชิก" : "Delete user"}
                               >
                                 <Trash2 className="h-2.5 w-2.5" />

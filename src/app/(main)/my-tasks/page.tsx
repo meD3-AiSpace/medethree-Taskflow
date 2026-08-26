@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { formatDate, getPriorityBadgeColor, getPriorityLabel, getStatusLabel } f
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 
 export default function MyTasksPage() {
+  const router = useRouter();
   const { tasks, currentUser, updateTaskStatus } = useTaskStore();
   const { t, lang } = useLanguage();
   const [filterStatus, setFilterStatus] = useState<"active" | "completed">("active");
@@ -102,7 +104,8 @@ export default function MyTasksPage() {
             return (
               <div
                 key={task.id}
-                className="p-4 rounded-xl border bg-card hover:border-emerald-500/50 shadow-xs hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs"
+                onClick={() => router.push(`/tasks/${task.id}`)}
+                className="p-4 rounded-xl border bg-card hover:border-emerald-500/50 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 shadow-xs hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs cursor-pointer group"
               >
                 {/* Info */}
                 <div className="space-y-1.5 flex-1 min-w-0">
@@ -122,12 +125,11 @@ export default function MyTasksPage() {
                     </span>
                   </div>
 
-                  <Link
-                    href={`/tasks/${task.id}`}
-                    className="font-bold text-sm text-foreground hover:text-emerald-600 transition-colors block truncate"
+                  <span
+                    className="font-bold text-sm text-foreground group-hover:text-emerald-600 transition-colors block truncate"
                   >
                     {displayTitle}
-                  </Link>
+                  </span>
 
                   {/* Issues */}
                   {openIssues > 0 && (
@@ -153,19 +155,28 @@ export default function MyTasksPage() {
                   {task.status === "assigned" && (
                     <Button
                       size="sm"
-                      onClick={() => updateTaskStatus(task.id, "in_progress")}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateTaskStatus(task.id, "in_progress");
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 cursor-pointer"
                     >
                       {t("startNow")}
                     </Button>
                   )}
 
-                  <Link href={`/tasks/${task.id}`}>
-                    <Button variant="outline" size="sm" className="text-xs h-8 gap-1">
-                      <span>{t("openTask")}</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/tasks/${task.id}`);
+                    }}
+                    className="text-xs h-8 gap-1 group-hover:bg-emerald-600 group-hover:text-white transition-colors cursor-pointer"
+                  >
+                    <span>{t("openTask")}</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </div>
             );

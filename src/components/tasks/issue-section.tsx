@@ -16,7 +16,7 @@ interface IssueSectionProps {
 }
 
 export function IssueSection({ taskId }: IssueSectionProps) {
-  const { issues, addIssue, resolveIssue, currentUser, geminiApiKey } = useTaskStore();
+  const { issues, addIssue, resolveIssue, currentUser } = useTaskStore();
   const { t, lang } = useLanguage();
   const taskIssues = issues.filter((i) => i.task_id === taskId);
 
@@ -34,7 +34,7 @@ export function IssueSection({ taskId }: IssueSectionProps) {
   const handleTranslateIssue = async () => {
     if (!newIssueDesc.trim()) return;
     setIsTranslating(true);
-    const res = await translateText(newIssueDesc, geminiApiKey);
+    const res = await translateText(newIssueDesc);
     setNewIssueDescEn(res.translatedText);
     setIsTranslating(false);
   };
@@ -42,7 +42,7 @@ export function IssueSection({ taskId }: IssueSectionProps) {
   const handleTranslateResolution = async () => {
     if (!resolutionDesc.trim()) return;
     setIsTranslating(true);
-    const res = await translateText(resolutionDesc, geminiApiKey);
+    const res = await translateText(resolutionDesc);
     setResolutionDescEn(res.translatedText);
     setIsTranslating(false);
   };

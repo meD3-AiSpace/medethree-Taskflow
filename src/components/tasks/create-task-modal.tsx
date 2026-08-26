@@ -25,7 +25,7 @@ export function CreateTaskModal({
   defaultCategory = "design",
   initialDeadline = "",
 }: CreateTaskModalProps) {
-  const { createTask, projects, users, geminiApiKey } = useTaskStore();
+  const { createTask, projects, users } = useTaskStore();
   const { t, lang } = useLanguage();
 
   const [title, setTitle] = useState("");
@@ -68,15 +68,15 @@ export function CreateTaskModal({
     setIsTranslating(true);
 
     if (title.trim()) {
-      const resTitle = await translateText(title, geminiApiKey);
+      const resTitle = await translateText(title);
       setTitleEn(resTitle.translatedText);
     }
     if (description.trim()) {
-      const resDesc = await translateText(description, geminiApiKey);
+      const resDesc = await translateText(description);
       setDescriptionEn(resDesc.translatedText);
     }
     if (authority.trim()) {
-      const resAuth = await translateText(authority, geminiApiKey);
+      const resAuth = await translateText(authority);
       setAuthorityEn(resAuth.translatedText);
     }
 

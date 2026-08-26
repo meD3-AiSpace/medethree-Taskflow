@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { PermitStatus, Task } from "@/lib/types/database.types";
@@ -24,6 +25,7 @@ import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 
 export default function PermitTrackingPage() {
+  const router = useRouter();
   const { tasks, updatePermitStatus } = useTaskStore();
   const { t, lang } = useLanguage();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -184,7 +186,8 @@ export default function PermitTrackingPage() {
                         key={task.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, task)}
-                        className="group rounded-xl border bg-card p-3 shadow-xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-border hover:border-emerald-500/50 space-y-2 text-xs"
+                        onClick={() => router.push(`/tasks/${task.id}`)}
+                        className="group rounded-xl border bg-card p-3 shadow-xs hover:shadow-md transition-all cursor-pointer border-border hover:border-emerald-500/50 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 space-y-2 text-xs"
                       >
                         {/* Type & Revision badge */}
                         <div className="flex items-center justify-between gap-1">
@@ -200,12 +203,11 @@ export default function PermitTrackingPage() {
                         </div>
 
                         {/* Title */}
-                        <Link
-                          href={`/tasks/${task.id}`}
-                          className="font-semibold text-foreground hover:text-emerald-600 block line-clamp-2 leading-snug"
+                        <span
+                          className="font-semibold text-foreground group-hover:text-emerald-600 transition-colors block line-clamp-2 leading-snug"
                         >
                           {displayTitle}
-                        </Link>
+                        </span>
 
                         {/* Authority info */}
                         <div className="p-2 rounded bg-muted/40 text-[11px] space-y-0.5">

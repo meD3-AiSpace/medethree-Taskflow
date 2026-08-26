@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { Project, Task, TaskIssue, TimeEntry } from "@/lib/types/database.types";
 import { Language } from "@/lib/i18n/translations";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
@@ -21,6 +22,7 @@ export function ProjectHealthTable({
   timeEntries,
   lang,
 }: ProjectHealthTableProps) {
+  const router = useRouter();
   // Build aggregated project statistics
   const projectStats = projects.map((project) => {
     const projTasks = tasks.filter((t) => t.project_id === project.id);
@@ -79,8 +81,12 @@ export function ProjectHealthTable({
           </thead>
           <tbody className="divide-y">
             {projectStats.map((p) => (
-              <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                <td className="py-3 px-4 font-semibold text-foreground">
+              <tr
+                key={p.id}
+                onClick={() => router.push(`/tasks?project=${p.id}`)}
+                className="hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all cursor-pointer group"
+              >
+                <td className="py-3 px-4 font-semibold text-foreground group-hover:text-emerald-600 transition-colors">
                   {p.name}
                 </td>
                 <td className="py-3 px-4 text-center text-muted-foreground">{p.total}</td>

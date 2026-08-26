@@ -18,7 +18,7 @@ interface QuickLogIssueModalProps {
 }
 
 export function QuickLogIssueModal({ task, open, onOpenChange }: QuickLogIssueModalProps) {
-  const { addIssue, geminiApiKey } = useTaskStore();
+  const { addIssue } = useTaskStore();
   const { t, lang } = useLanguage();
 
   const [description, setDescription] = useState("");
@@ -34,7 +34,7 @@ export function QuickLogIssueModal({ task, open, onOpenChange }: QuickLogIssueMo
   const handleTranslate = async () => {
     if (!description.trim()) return;
     setIsTranslating(true);
-    const res = await translateText(description, geminiApiKey);
+    const res = await translateText(description);
     setDescriptionEn(res.translatedText);
     setIsTranslating(false);
   };

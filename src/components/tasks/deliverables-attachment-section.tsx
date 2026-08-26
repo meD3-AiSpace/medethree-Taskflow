@@ -279,7 +279,7 @@ export function DeliverablesAttachmentSection({ taskId }: DeliverablesAttachment
                         href={file.file_url}
                         download={file.file_name}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                       >
                         <Button
                           type="button"
@@ -340,7 +340,7 @@ export function DeliverablesAttachmentSection({ taskId }: DeliverablesAttachment
                   href={previewAttachment.file_url}
                   download={previewAttachment.file_name}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                 >
                   <Button variant="outline" size="sm" className="text-xs h-8 gap-1.5">
                     <Download className="h-3.5 w-3.5" />

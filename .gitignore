@@ -1,7 +1,22 @@
-﻿node_modules
+node_modules
 .next
 .backup_*
 _backup_*
+.env
 .env.local
+.env*.local
 .DS_Store
 *.log
+evidence*.log
+security-report-*.json
+audit-*.txt
+auditor-*.txt
+test_*.json
+test-*.js
+scratch/
+Recovery Code/
+generate-dump*.js
+run-*.js
+run-*.mjs
+run-*.ps1
+verify-auditor.js

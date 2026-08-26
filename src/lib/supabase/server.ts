@@ -3,10 +3,16 @@ import { cookies } from "next/headers";
 
 export function createClient() {
   const cookieStore = cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://mock.supabase.co";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "mock-key";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON || process.env.SUPABASE_ANON;
 
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
+  if (!supabaseUrl || !supabaseAnon) {
+    throw new Error(
+      "Missing Supabase Environment Variables: Please define NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON in .env.local"
+    );
+  }
+
+  return createServerClient(supabaseUrl, supabaseAnon, {
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value;

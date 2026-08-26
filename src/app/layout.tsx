@@ -4,8 +4,13 @@ import { TaskProvider } from "@/lib/store/task-store";
 import { LanguageProvider } from "@/lib/i18n/language-context";
 
 export const metadata: Metadata = {
-  title: "TaskFlow Manager — Operational Visibility",
-  description: "ระบบติดตามงานและการทำงานร่วมกันสำหรับองค์กร (Phase 1 MVP)",
+  title: "Lighthouse — ประภาคารนำทางความสำเร็จในการบริหารงาน",
+  description: "ระบบติดตามงานและบริหารบุคลากร Lighthouse TaskFlow — ประภาคารที่นำแสงไฟสู่เรือที่กำลังหลงทางกลางพายุที่มืดมิด",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

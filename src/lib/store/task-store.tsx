@@ -617,8 +617,6 @@ interface TaskContextType {
   teams: Team[];
   users: UserProfile[];
   projects: Project[];
-  geminiApiKey: string;
-  setGeminiApiKey: (key: string) => void;
   // User Management Actions
   addUser: (userData: { full_name: string; email: string; role: UserRole; team_id?: string; line_user_id?: string }) => UserProfile;
   updateUser: (userId: string, updates: Partial<UserProfile>) => void;
@@ -670,7 +668,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<UserProfile[]>(defaultUsers);
   const [teams, setTeams] = useState<Team[]>(defaultTeams);
   const [projects] = useState<Project[]>(defaultProjects);
-  const [geminiApiKey, setGeminiApiKeyState] = useState("AIzaSyC6mSrD6cAq1vqaWgbBrI1MHWydh26VmLs");
 
   // Load from localStorage if available
   useEffect(() => {
@@ -683,9 +680,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       const savedAttachments = localStorage.getItem("taskflow_attachments");
       const savedTimeEntries = localStorage.getItem("taskflow_time_entries");
       const savedUser = localStorage.getItem("taskflow_current_user");
-      const savedKey = localStorage.getItem("taskflow_gemini_api_key");
 
-      if (savedKey) setGeminiApiKeyState(savedKey);
       if (savedUsers) setUsers(JSON.parse(savedUsers));
       if (savedAttachments) setAttachments(JSON.parse(savedAttachments));
       if (savedTimeEntries) setTimeEntries(JSON.parse(savedTimeEntries));
@@ -714,13 +709,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       // fallback
     }
   }, []);
-
-  const setGeminiApiKey = (key: string) => {
-    setGeminiApiKeyState(key);
-    try {
-      localStorage.setItem("taskflow_gemini_api_key", key);
-    } catch {}
-  };
 
   const saveState = (newTasks: Task[], newIssues: TaskIssue[], newLogs: ActivityLog[]) => {
     try {
@@ -848,11 +836,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     let descEn = taskData.description_en;
 
     if (!titleEn && taskData.title) {
-      const trans = await translateText(taskData.title, geminiApiKey);
+      const trans = await translateText(taskData.title);
       titleEn = trans.translatedText;
     }
     if (!descEn && taskData.description) {
-      const trans = await translateText(taskData.description, geminiApiKey);
+      const trans = await translateText(taskData.description);
       descEn = trans.translatedText;
     }
 
@@ -883,11 +871,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       let authorityEn = permitData?.authority_en;
 
       if (!permitTypeEn && permitData?.permit_type) {
-        const trans = await translateText(permitData.permit_type, geminiApiKey);
+        const trans = await translateText(permitData.permit_type);
         permitTypeEn = trans.translatedText;
       }
       if (!authorityEn && permitData?.authority) {
-        const trans = await translateText(permitData.authority, geminiApiKey);
+        const trans = await translateText(permitData.authority);
         authorityEn = trans.translatedText;
       }
 
@@ -946,12 +934,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const taskCommentsCount = comments.filter((c) => c.task_id === taskId).length;
 
     const validation = validateStateTransition({
-      task: { ...task, comments_count: taskCommentsCount },
+      currentStatus: task.status,
       targetStatus: newStatus,
-      userRole: currentUser.role,
-      userId: currentUser.id,
-      hasOutputCommentOrAttachment: taskCommentsCount > 0,
-      hasAssigneeAndDeadline: !!(task.assignees && task.assignees.length > 0 && task.deadline),
+      deadlineSet: !!task.deadline,
+      assigneeIds: (task.assignees || []).map((a) => a.id),
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+      evidenceCount: taskCommentsCount,
     });
 
     if (!validation.allowed) {
@@ -1048,7 +1037,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const addIssue = async (taskId: string, description: string, descriptionEn?: string): Promise<TaskIssue> => {
     let finalDescEn = descriptionEn;
     if (!finalDescEn) {
-      const trans = await translateText(description, geminiApiKey);
+      const trans = await translateText(description);
       finalDescEn = trans.translatedText;
     }
 
@@ -1093,7 +1082,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     let finalResEn = resolutionEn;
     if (!finalResEn) {
-      const trans = await translateText(resolution, geminiApiKey);
+      const trans = await translateText(resolution);
       finalResEn = trans.translatedText;
     }
 
@@ -1197,7 +1186,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const addComment = async (taskId: string, content: string, contentEn?: string): Promise<Comment> => {
     let finalContentEn = contentEn;
     if (!finalContentEn) {
-      const trans = await translateText(content, geminiApiKey);
+      const trans = await translateText(content);
       finalContentEn = trans.translatedText;
     }
 
@@ -1445,8 +1434,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         teams,
         users,
         projects,
-        geminiApiKey,
-        setGeminiApiKey,
         addUser,
         updateUser,
         deleteUser,

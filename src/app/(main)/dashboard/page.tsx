@@ -399,16 +399,17 @@ export default function DashboardPage() {
               const isOverloaded = taskCount >= 4;
 
               return (
-                <div
+                <Link
                   key={user.id}
-                  className={`p-3.5 rounded-xl border transition-all ${
+                  href={`/tasks?assignee=${user.id}`}
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer hover:shadow-md hover:border-emerald-500/50 block group ${
                     isOverloaded
                       ? "border-amber-300 bg-amber-50/30 dark:bg-amber-950/20"
-                      : "border-border bg-card"
+                      : "border-border bg-card hover:bg-muted/20"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold text-xs text-foreground truncate">
+                    <div className="font-semibold text-xs text-foreground group-hover:text-emerald-600 transition-colors truncate">
                       {user.full_name}
                     </div>
                     <Badge variant={user.role === "manager" ? "high" : "default"} className="text-[9px] uppercase">
@@ -443,7 +444,7 @@ export default function DashboardPage() {
                       {urgentCount} {lang === "th" ? "งาน" : "tasks"}
                     </span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

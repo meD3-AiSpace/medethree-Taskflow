@@ -1,23 +1,16 @@
 // ====================================================================
-// Client-side Translation Helper
-// Calls /api/translate with optional user-supplied Gemini API key
+// Client-side Translation Helper (Secure Server-Side Execution)
+// Calls /api/translate which reads GEMINI_API_KEY from server environment
 // ====================================================================
 
 export async function translateText(
-  text: string,
-  userApiKey?: string
+  text: string
 ): Promise<{ success: boolean; translatedText: string; error?: string }> {
   if (!text || !text.trim()) {
     return { success: true, translatedText: "" };
   }
 
   try {
-    const key =
-      userApiKey ||
-      (typeof window !== "undefined"
-        ? localStorage.getItem("taskflow_gemini_api_key") || ""
-        : "");
-
     const res = await fetch("/api/translate", {
       method: "POST",
       headers: {
@@ -25,7 +18,6 @@ export async function translateText(
       },
       body: JSON.stringify({
         text: text.trim(),
-        apiKey: key,
       }),
     });
 
