@@ -1,6 +1,6 @@
 // ====================================================================
 // TaskFlow — Supabase Cloud Data Sync & Realtime Service
-// Bridges client store with live Supabase Database & WebSockets
+// Bridges client store with /api/sync and Supabase Broadcast channels
 // ====================================================================
 
 import { createClient } from "./client";
@@ -9,217 +9,174 @@ import {
   Comment,
   TaskIssue,
   PermitDetails,
-  ActivityLog,
   TimeEntry,
-  TaskAttachment,
-  UserProfile,
-  Team,
-  Project,
 } from "@/lib/types/database.types";
 
 export class SupabaseSyncService {
+  private static broadcastChannel: any = null;
+
   private static getClient() {
     try {
       return createClient();
-    } catch (err) {
-      console.warn("[Supabase Client Warning]:", err);
+    } catch {
       return null;
     }
   }
 
-  // 1. Fetch All Domain Data from Supabase Cloud
+  // 1. Fetch All Domain Data via Server Sync API
   public static async fetchCloudData() {
-    const supabase = this.getClient();
-    if (!supabase) return null;
-
     try {
-      const [
-        tasksRes,
-        projectsRes,
-        teamsRes,
-        usersRes,
-        commentsRes,
-        attachmentsRes,
-        issuesRes,
-        permitsRes,
-        timeRes,
-        logsRes,
-      ] = await Promise.all([
-        supabase.from("tasks").select("*").order("created_at", { ascending: false }),
-        supabase.from("projects").select("*"),
-        supabase.from("teams").select("*"),
-        supabase.from("users").select("*"),
-        supabase.from("comments").select("*").order("created_at", { ascending: true }),
-        supabase.from("attachments").select("*").order("created_at", { ascending: false }),
-        supabase.from("task_issues").select("*").order("raised_at", { ascending: false }),
-        supabase.from("permit_details").select("*"),
-        supabase.from("time_entries").select("*").order("created_at", { ascending: false }),
-        supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(50),
-      ]);
+      const res = await fetch("/api/sync", {
+        method: "GET",
+        headers: { "Cache-Control": "no-cache" },
+      });
 
-      return {
-        tasks: tasksRes.data || [],
-        projects: projectsRes.data || [],
-        teams: teamsRes.data || [],
-        users: usersRes.data || [],
-        comments: commentsRes.data || [],
-        attachments: attachmentsRes.data || [],
-        issues: issuesRes.data || [],
-        permits: permitsRes.data || [],
-        timeEntries: timeRes.data || [],
-        activityLogs: logsRes.data || [],
-      };
+      if (!res.ok) {
+        console.warn("[Sync Fetch HTTP Status]:", res.status);
+        return null;
+      }
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        return json.data;
+      }
+      return null;
     } catch (err) {
-      console.error("[Supabase Sync Fetch Error]:", err);
+      console.error("[Sync Fetch Error]:", err);
       return null;
     }
   }
 
-  // 2. Subscribe to Realtime Postgres Changes across devices
-  public static subscribeRealtime(callbacks: {
-    onTaskChange?: (payload: any) => void;
-    onCommentChange?: (payload: any) => void;
-    onIssueChange?: (payload: any) => void;
-    onPermitChange?: (payload: any) => void;
-    onLogChange?: (payload: any) => void;
-  }) {
+  // 2. Broadcast and Subscribe to Realtime Cross-Device Updates
+  public static subscribeRealtime(onSyncRequired: () => void) {
     const supabase = this.getClient();
     if (!supabase) return () => {};
 
-    const channel = supabase
-      .channel("taskflow-realtime-sync")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "tasks" },
-        (payload) => callbacks.onTaskChange?.(payload)
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "comments" },
-        (payload) => callbacks.onCommentChange?.(payload)
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "task_issues" },
-        (payload) => callbacks.onIssueChange?.(payload)
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "permit_details" },
-        (payload) => callbacks.onPermitChange?.(payload)
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "activity_log" },
-        (payload) => callbacks.onLogChange?.(payload)
-      )
-      .subscribe();
+    try {
+      const channel = supabase.channel("global-taskflow-sync", {
+        config: { broadcast: { self: false } },
+      });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      channel
+        .on("broadcast", { event: "database-updated" }, () => {
+          console.log("⚡ [Realtime Sync]: Database change detected from another device!");
+          onSyncRequired();
+        })
+        .subscribe();
+
+      this.broadcastChannel = channel;
+
+      return () => {
+        supabase.removeChannel(channel);
+        this.broadcastChannel = null;
+      };
+    } catch (err) {
+      console.warn("[Realtime Channel Warning]:", err);
+      return () => {};
+    }
   }
 
-  // 3. Persist Task to Supabase Cloud
-  public static async saveTask(task: Partial<Task>, permitDetails?: Partial<PermitDetails>) {
-    const supabase = this.getClient();
-    if (!supabase) return;
-
+  private static triggerBroadcast() {
     try {
-      const dbTask = {
-        id: task.id,
-        org_id: task.org_id || "11111111-1111-1111-1111-111111111111",
-        project_id: task.project_id || null,
-        category: task.category || "design",
-        title: task.title,
-        description: task.description || "",
-        status: task.status || "todo",
-        priority: task.priority || "medium",
-        created_by: task.created_by || null,
-        deadline: task.deadline || null,
-        status_changed_at: task.status_changed_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      await supabase.from("tasks").upsert(dbTask);
-
-      if (permitDetails && task.id) {
-        await supabase.from("permit_details").upsert({
-          task_id: task.id,
-          permit_type: permitDetails.permit_type || "ใบอนุญาตก่อสร้าง (อ.1)",
-          authority: permitDetails.authority || "สำนักงานเขต/เทศบาล",
-          submitted_date: permitDetails.submitted_date || null,
-          target_approval_date: permitDetails.target_approval_date || null,
-          revision_round: permitDetails.revision_round || 0,
-          permit_status: permitDetails.permit_status || "preparing",
+      if (this.broadcastChannel) {
+        this.broadcastChannel.send({
+          type: "broadcast",
+          event: "database-updated",
+          payload: { timestamp: Date.now() },
         });
       }
     } catch (err) {
-      console.error("[Supabase Save Task Error]:", err);
+      console.warn("[Broadcast Send Warning]:", err);
     }
   }
 
-  // 4. Delete Task from Supabase Cloud
+  // 3. Persist Task via Server API
+  public static async saveTask(task: Partial<Task>, permitDetails?: Partial<PermitDetails>) {
+    try {
+      await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_task",
+          payload: { task, permitDetails },
+        }),
+      });
+
+      this.triggerBroadcast();
+    } catch (err) {
+      console.error("[Save Task Error]:", err);
+    }
+  }
+
+  // 4. Delete Task via Server API
   public static async deleteTask(taskId: string) {
-    const supabase = this.getClient();
-    if (!supabase) return;
     try {
-      await supabase.from("tasks").delete().eq("id", taskId);
+      await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete_task",
+          payload: { taskId },
+        }),
+      });
+
+      this.triggerBroadcast();
     } catch (err) {
-      console.error("[Supabase Delete Task Error]:", err);
+      console.error("[Delete Task Error]:", err);
     }
   }
 
-  // 5. Save Comment to Supabase Cloud
+  // 5. Save Comment via Server API
   public static async saveComment(comment: Partial<Comment>) {
-    const supabase = this.getClient();
-    if (!supabase) return;
     try {
-      await supabase.from("comments").insert({
-        id: comment.id,
-        task_id: comment.task_id,
-        user_id: comment.user_id,
-        content: comment.content,
+      await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_comment",
+          payload: { comment },
+        }),
       });
+
+      this.triggerBroadcast();
     } catch (err) {
-      console.error("[Supabase Save Comment Error]:", err);
+      console.error("[Save Comment Error]:", err);
     }
   }
 
-  // 6. Save Issue to Supabase Cloud
+  // 6. Save Issue via Server API
   public static async saveIssue(issue: Partial<TaskIssue>) {
-    const supabase = this.getClient();
-    if (!supabase) return;
     try {
-      await supabase.from("task_issues").upsert({
-        id: issue.id,
-        task_id: issue.task_id,
-        issue_description: issue.issue_description,
-        raised_by: issue.raised_by,
-        is_resolved: issue.is_resolved || false,
-        resolved_by: issue.resolved_by || null,
-        resolved_at: issue.resolved_at || null,
-        resolution_description: issue.resolution_description || null,
+      await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_issue",
+          payload: { issue },
+        }),
       });
+
+      this.triggerBroadcast();
     } catch (err) {
-      console.error("[Supabase Save Issue Error]:", err);
+      console.error("[Save Issue Error]:", err);
     }
   }
 
-  // 7. Save Time Entry to Supabase Cloud
+  // 7. Save Time Entry via Server API
   public static async saveTimeEntry(timeEntry: Partial<TimeEntry>) {
-    const supabase = this.getClient();
-    if (!supabase) return;
     try {
-      await supabase.from("time_entries").insert({
-        id: timeEntry.id,
-        task_id: timeEntry.task_id,
-        user_id: timeEntry.user_id,
-        minutes: timeEntry.duration_minutes || (timeEntry.hours || 0) * 60 + (timeEntry.minutes || 0),
-        description: timeEntry.note || "",
+      await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_time_entry",
+          payload: { timeEntry },
+        }),
       });
+
+      this.triggerBroadcast();
     } catch (err) {
-      console.error("[Supabase Save Time Entry Error]:", err);
+      console.error("[Save Time Entry Error]:", err);
     }
   }
 }

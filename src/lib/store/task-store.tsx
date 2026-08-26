@@ -714,13 +714,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     loadCloudData();
 
-    // Subscribe to Realtime Postgres WebSockets for instant cross-device updates
-    unsubscribe = SupabaseSyncService.subscribeRealtime({
-      onTaskChange: () => loadCloudData(),
-      onCommentChange: () => loadCloudData(),
-      onIssueChange: () => loadCloudData(),
-      onPermitChange: () => loadCloudData(),
-      onLogChange: () => loadCloudData(),
+    // Subscribe to Realtime Broadcast for instant cross-device updates
+    unsubscribe = SupabaseSyncService.subscribeRealtime(() => {
+      loadCloudData();
     });
 
     return () => {
