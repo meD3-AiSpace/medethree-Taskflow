@@ -1,6 +1,6 @@
 // ====================================================================
 // TaskFlow — Supabase Cloud Data Sync & Realtime Service
-// Bridges client store with /api/sync and Supabase Broadcast channels
+// High-Performance Debounced Cloud Sync with Zero UI Blocking
 // ====================================================================
 
 import { createClient } from "./client";
@@ -14,6 +14,8 @@ import {
 
 export class SupabaseSyncService {
   private static broadcastChannel: any = null;
+  private static pendingFetchPromise: Promise<any> | null = null;
+  private static debounceTimer: NodeJS.Timeout | null = null;
 
   private static getClient() {
     try {
@@ -23,31 +25,41 @@ export class SupabaseSyncService {
     }
   }
 
-  // 1. Fetch All Domain Data via Server Sync API
+  // 1. Fetch All Domain Data with Promise Deduplication (Prevents redundant simultaneous requests)
   public static async fetchCloudData() {
-    try {
-      const res = await fetch("/api/sync", {
-        method: "GET",
-        headers: { "Cache-Control": "no-cache" },
-      });
-
-      if (!res.ok) {
-        console.warn("[Sync Fetch HTTP Status]:", res.status);
-        return null;
-      }
-
-      const json = await res.json();
-      if (json.success && json.data) {
-        return json.data;
-      }
-      return null;
-    } catch (err) {
-      console.error("[Sync Fetch Error]:", err);
-      return null;
+    if (this.pendingFetchPromise) {
+      return this.pendingFetchPromise;
     }
+
+    this.pendingFetchPromise = (async () => {
+      try {
+        const res = await fetch("/api/sync", {
+          method: "GET",
+          headers: { "Cache-Control": "no-cache" },
+        });
+
+        if (!res.ok) {
+          console.warn("[Sync Fetch HTTP Status]:", res.status);
+          return null;
+        }
+
+        const json = await res.json();
+        if (json.success && json.data) {
+          return json.data;
+        }
+        return null;
+      } catch (err) {
+        console.error("[Sync Fetch Error]:", err);
+        return null;
+      } finally {
+        this.pendingFetchPromise = null;
+      }
+    })();
+
+    return this.pendingFetchPromise;
   }
 
-  // 2. Broadcast and Subscribe to Realtime Cross-Device Updates
+  // 2. Broadcast and Subscribe to Realtime Cross-Device Updates with Debouncing
   public static subscribeRealtime(onSyncRequired: () => void) {
     const supabase = this.getClient();
     if (!supabase) return () => {};
@@ -59,14 +71,18 @@ export class SupabaseSyncService {
 
       channel
         .on("broadcast", { event: "database-updated" }, () => {
-          console.log("⚡ [Realtime Sync]: Database change detected from another device!");
-          onSyncRequired();
+          // Debounce rapid sync notifications to prevent render cascades
+          if (this.debounceTimer) clearTimeout(this.debounceTimer);
+          this.debounceTimer = setTimeout(() => {
+            onSyncRequired();
+          }, 300);
         })
         .subscribe();
 
       this.broadcastChannel = channel;
 
       return () => {
+        if (this.debounceTimer) clearTimeout(this.debounceTimer);
         supabase.removeChannel(channel);
         this.broadcastChannel = null;
       };
@@ -90,17 +106,17 @@ export class SupabaseSyncService {
     }
   }
 
-  // 3. Persist Task via Server API
+  // 3. Persist Task via Server API (Non-blocking async)
   public static async saveTask(task: Partial<Task>, permitDetails?: Partial<PermitDetails>) {
     try {
-      await fetch("/api/sync", {
+      fetch("/api/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "save_task",
           payload: { task, permitDetails },
         }),
-      });
+      }).catch((err) => console.error("[Save Task Background Error]:", err));
 
       this.triggerBroadcast();
     } catch (err) {
@@ -108,17 +124,17 @@ export class SupabaseSyncService {
     }
   }
 
-  // 4. Delete Task via Server API
+  // 4. Delete Task via Server API (Non-blocking async)
   public static async deleteTask(taskId: string) {
     try {
-      await fetch("/api/sync", {
+      fetch("/api/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "delete_task",
           payload: { taskId },
         }),
-      });
+      }).catch((err) => console.error("[Delete Task Background Error]:", err));
 
       this.triggerBroadcast();
     } catch (err) {
@@ -126,17 +142,17 @@ export class SupabaseSyncService {
     }
   }
 
-  // 5. Save Comment via Server API
+  // 5. Save Comment via Server API (Non-blocking async)
   public static async saveComment(comment: Partial<Comment>) {
     try {
-      await fetch("/api/sync", {
+      fetch("/api/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "save_comment",
           payload: { comment },
         }),
-      });
+      }).catch((err) => console.error("[Save Comment Background Error]:", err));
 
       this.triggerBroadcast();
     } catch (err) {
@@ -144,17 +160,17 @@ export class SupabaseSyncService {
     }
   }
 
-  // 6. Save Issue via Server API
+  // 6. Save Issue via Server API (Non-blocking async)
   public static async saveIssue(issue: Partial<TaskIssue>) {
     try {
-      await fetch("/api/sync", {
+      fetch("/api/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "save_issue",
           payload: { issue },
         }),
-      });
+      }).catch((err) => console.error("[Save Issue Background Error]:", err));
 
       this.triggerBroadcast();
     } catch (err) {
@@ -162,17 +178,17 @@ export class SupabaseSyncService {
     }
   }
 
-  // 7. Save Time Entry via Server API
+  // 7. Save Time Entry via Server API (Non-blocking async)
   public static async saveTimeEntry(timeEntry: Partial<TimeEntry>) {
     try {
-      await fetch("/api/sync", {
+      fetch("/api/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "save_time_entry",
           payload: { timeEntry },
         }),
-      });
+      }).catch((err) => console.error("[Save Time Entry Background Error]:", err));
 
       this.triggerBroadcast();
     } catch (err) {
