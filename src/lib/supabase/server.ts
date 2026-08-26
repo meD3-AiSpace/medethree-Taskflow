@@ -1,16 +1,13 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+const DEFAULT_SUPABASE_URL = "https://gihjahkmflcnnbebzebw.supabase.co";
+const DEFAULT_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpaGphaGttZmxjbm5iZWJ6ZWJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczODQ4MjQsImV4cCI6MjEwMjk2MDgyNH0.f4kF8ecNIoXNTnTLrb_Gs1WXzHKn31WqUsQS_xDWnrU";
+
 export function createClient() {
   const cookieStore = cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON || process.env.SUPABASE_ANON;
-
-  if (!supabaseUrl || !supabaseAnon) {
-    throw new Error(
-      "Missing Supabase Environment Variables: Please define NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON in .env.local"
-    );
-  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON || process.env.SUPABASE_ANON || DEFAULT_SUPABASE_ANON;
 
   return createServerClient(supabaseUrl, supabaseAnon, {
     cookies: {
