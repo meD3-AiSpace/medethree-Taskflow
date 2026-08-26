@@ -699,8 +699,34 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
             setTasks(mappedTasks);
           }
 
-          if (cloudData.teams && cloudData.teams.length > 0) setTeams(cloudData.teams);
-          if (cloudData.users && cloudData.users.length > 0) setUsers(cloudData.users);
+          if (cloudData.teams && cloudData.teams.length >= defaultTeams.length) {
+            setTeams(cloudData.teams);
+          } else if (cloudData.teams && cloudData.teams.length > 0) {
+            const mergedTeams = [...defaultTeams];
+            cloudData.teams.forEach((ct: any) => {
+              if (!mergedTeams.some(dt => dt.id === ct.id)) {
+                mergedTeams.push(ct);
+              }
+            });
+            setTeams(mergedTeams);
+          } else {
+            setTeams(defaultTeams);
+          }
+
+          if (cloudData.users && cloudData.users.length >= defaultUsers.length) {
+            setUsers(cloudData.users);
+          } else if (cloudData.users && cloudData.users.length > 0) {
+            const mergedUsers = [...defaultUsers];
+            cloudData.users.forEach((cu: any) => {
+              if (!mergedUsers.some(du => du.id === cu.id)) {
+                mergedUsers.push(cu);
+              }
+            });
+            setUsers(mergedUsers);
+          } else {
+            setUsers(defaultUsers);
+          }
+
           if (cloudData.comments && cloudData.comments.length > 0) setComments(cloudData.comments);
           if (cloudData.attachments && cloudData.attachments.length > 0) setAttachments(cloudData.attachments);
           if (cloudData.issues && cloudData.issues.length > 0) setIssues(cloudData.issues);
