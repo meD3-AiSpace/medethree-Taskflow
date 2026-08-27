@@ -746,14 +746,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
           created_at: cp.created_at || new Date().toISOString(),
         };
       });
-      defaultProjects.forEach((dp) => {
-        if (!mergedProjects.some((mp) => mp.id === dp.id)) {
-          mergedProjects.push(dp);
-        }
-      });
       setProjects(mergedProjects);
       try { localStorage.setItem("taskflow_projects", JSON.stringify(mergedProjects)); } catch {}
-    } else {
+    } else if (cloudData.projects && cloudData.projects.length === 0) {
       setProjects(defaultProjects);
     }
 
@@ -1008,11 +1003,24 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const deleteProject = (projectId: string): { success: boolean; message?: string } => {
     if (projects.length <= 1) {
-      return { success: false, message: "ไม่สามารถลบโครงการสุดท้ายได้" };
+      return { success: false, message: "ไม่สามารถลบโครงการสุดท้ายได้ (ต้องมีอย่างน้อย 1 โครงการ)" };
     }
-    const updated = projects.filter((p) => p.id !== projectId);
-    setProjects(updated);
-    try { localStorage.setItem("taskflow_projects", JSON.stringify(updated)); } catch {}
+    const updatedProjects = projects.filter((p) => p.id !== projectId);
+    setProjects(updatedProjects);
+
+    const fallbackProject = updatedProjects[0];
+    const updatedTasks = tasks.map((t) =>
+      t.project_id === projectId
+        ? { ...t, project_id: fallbackProject ? fallbackProject.id : null, project: fallbackProject }
+        : t
+    );
+    setTasks(updatedTasks);
+
+    try {
+      localStorage.setItem("taskflow_projects", JSON.stringify(updatedProjects));
+      localStorage.setItem("taskflow_tasks", JSON.stringify(updatedTasks));
+    } catch {}
+
     SupabaseSyncService.deleteProject(projectId);
     return { success: true };
   };

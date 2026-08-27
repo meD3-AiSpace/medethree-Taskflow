@@ -243,6 +243,9 @@ export async function POST(request: NextRequest) {
 
       case "delete_project": {
         const { projectId } = payload;
+        // 1. Unlink tasks from this project first to satisfy foreign key constraints
+        await supabase.from("tasks").update({ project_id: null }).eq("project_id", projectId);
+        // 2. Delete project from Supabase Cloud
         const { error: dpErr } = await supabase.from("projects").delete().eq("id", projectId);
         if (dpErr) throw dpErr;
         return NextResponse.json({ success: true, message: "Project deleted from cloud" });
