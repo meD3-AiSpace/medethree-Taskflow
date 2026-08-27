@@ -7,6 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select } from "@/components/ui/select";
 import {
   Smartphone,
   Send,
@@ -27,8 +29,14 @@ import {
   ShieldAlert,
   FileCheck2,
   Clock,
+  FolderPlus,
+  Pencil,
+  Trash2,
+  Building2,
+  Plus,
 } from "lucide-react";
 import { translateText } from "@/lib/i18n/auto-translate";
+import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 import { cn } from "@/lib/utils";
 import { LighthouseLogo } from "@/components/ui/lighthouse-logo";
 
@@ -41,6 +49,11 @@ export default function SettingsPage() {
     currentUser,
     setCurrentUser,
     users,
+    teams,
+    projects,
+    addProject,
+    updateProject,
+    deleteProject,
     updateLineUserId,
     updateNotificationPreferences,
   } = useTaskStore();
@@ -50,6 +63,14 @@ export default function SettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [pushResult, setPushResult] = useState<{ success: boolean; message: string; raw?: any } | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  // Project Management Modal State
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState("");
+  const [projectNameEn, setProjectNameEn] = useState("");
+  const [projectTeamId, setProjectTeamId] = useState("");
+  const [projectMsg, setProjectMsg] = useState<{ success: boolean; text: string } | null>(null);
 
   // Phase 2: Notification Preferences State (Question 4: Choice ค)
   const [prefs, setPrefs] = useState({
@@ -675,7 +696,213 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* 3. Organization Info Card */}
+      {/* 3. Projects Management Card (🏗️ จัดการโครงการก่อสร้างและบ้านจัดสรร) */}
+      <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm">
+        <CardHeader className="p-4 pb-3 border-b flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-emerald-600" />
+            <div>
+              <CardTitle className="text-sm font-bold text-foreground">
+                {lang === "th" ? "จัดการโครงการก่อสร้าง & บ้านจัดสรร (Projects Management)" : "Projects Management"}
+              </CardTitle>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {lang === "th" ? "เพิ่ม แก้ไข หรือลบโครงการพัฒนาอสังหาฯ และไซต์งานก่อสร้าง" : "Add, update, or remove development projects and construction sites"}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setEditingProjectId(null);
+              setProjectName("");
+              setProjectNameEn("");
+              setProjectTeamId(teams[0]?.id || "team-design");
+              setProjectMsg(null);
+              setShowProjectModal(true);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-xs cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{lang === "th" ? "เพิ่มโครงการใหม่" : "Add Project"}</span>
+          </Button>
+        </CardHeader>
+
+        <CardContent className="p-4 space-y-3">
+          {projectMsg && (
+            <div className={`p-2.5 rounded-lg text-xs font-semibold flex items-center gap-2 ${projectMsg.success ? "bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-rose-50 text-rose-800 border border-rose-300 dark:bg-rose-950/40 dark:text-rose-300"}`}>
+              {projectMsg.success ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-rose-600" />}
+              <span>{projectMsg.text}</span>
+            </div>
+          )}
+
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-muted/40 text-muted-foreground border-b text-[11px] font-semibold">
+                <tr>
+                  <th className="py-2.5 px-4">#</th>
+                  <th className="py-2.5 px-4">{lang === "th" ? "ชื่อโครงการ (ไทย)" : "Project Name (TH)"}</th>
+                  <th className="py-2.5 px-4">{lang === "th" ? "ชื่อโครงการ (อังกฤษ)" : "Project Name (EN)"}</th>
+                  <th className="py-2.5 px-4">{lang === "th" ? "ฝ่ายงานที่รับผิดชอบ" : "Assigned Team"}</th>
+                  <th className="py-2.5 px-4 text-right">{lang === "th" ? "การจัดการ" : "Actions"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {projects.map((p, idx) => {
+                  const teamMatch = teams.find((t) => t.id === p.team_id);
+                  const teamName = teamMatch ? getLocalizedDynamicText(teamMatch.name, teamMatch.name_en, lang) : (lang === "th" ? "ฝ่ายออกแบบ" : "Design Team");
+
+                  return (
+                    <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-muted-foreground">{String(idx + 1).padStart(2, "0")}</td>
+                      <td className="py-3 px-4 font-semibold text-foreground">{p.name}</td>
+                      <td className="py-3 px-4 text-muted-foreground">{p.name_en || "-"}</td>
+                      <td className="py-3 px-4">
+                        <Badge variant="outline" className="text-[10px]">
+                          {teamName}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-right space-x-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingProjectId(p.id);
+                            setProjectName(p.name || "");
+                            setProjectNameEn(p.name_en || "");
+                            setProjectTeamId(p.team_id || teams[0]?.id || "team-design");
+                            setProjectMsg(null);
+                            setShowProjectModal(true);
+                          }}
+                          className="h-7 w-7 p-0 cursor-pointer text-muted-foreground hover:text-foreground"
+                          title={lang === "th" ? "แก้ไขโครงการ" : "Edit Project"}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (window.confirm(lang === "th" ? `ยืนยันการลบโครงการ "${p.name}"?` : `Confirm deleting project "${p.name}"?`)) {
+                              const res = deleteProject(p.id);
+                              if (res.success) {
+                                setProjectMsg({ success: true, text: lang === "th" ? "ลบโครงการเรียบร้อยแล้ว" : "Project deleted successfully" });
+                              } else {
+                                setProjectMsg({ success: false, text: res.message || "Error" });
+                              }
+                            }
+                          }}
+                          className="h-7 w-7 p-0 cursor-pointer text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950"
+                          title={lang === "th" ? "ลบโครงการ" : "Delete Project"}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Project Add / Edit Modal Dialog */}
+      <Dialog open={showProjectModal} onOpenChange={setShowProjectModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-emerald-600" />
+              <span>{editingProjectId ? (lang === "th" ? "แก้ไขโครงการ" : "Edit Project") : (lang === "th" ? "เพิ่มโครงการใหม่" : "Add New Project")}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!projectName.trim()) return;
+
+              let finalNameEn = projectNameEn.trim();
+              if (!finalNameEn) {
+                const trans = await translateText(projectName.trim());
+                finalNameEn = trans.translatedText;
+              }
+
+              if (editingProjectId) {
+                updateProject(editingProjectId, projectName.trim(), finalNameEn, projectTeamId);
+                setProjectMsg({ success: true, text: lang === "th" ? "อัปเดตโครงการเรียบร้อยแล้ว" : "Project updated successfully" });
+              } else {
+                addProject(projectName.trim(), finalNameEn, projectTeamId);
+                setProjectMsg({ success: true, text: lang === "th" ? "เพิ่มโครงการใหม่เรียบร้อยแล้ว" : "Project added successfully" });
+              }
+              setShowProjectModal(false);
+            }}
+            className="space-y-4 text-xs pt-2"
+          >
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">
+                {lang === "th" ? "ชื่อโครงการ (ภาษาไทย):" : "Project Name (Thai):"} <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                required
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="e.g. โครงการบ้านเดี่ยว The Forest Villa Phase 2"
+                className="text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">
+                {lang === "th" ? "ชื่อโครงการ (ภาษาอังกฤษ - แปลอัตโนมัติ):" : "Project Name (English):"}
+              </label>
+              <Input
+                value={projectNameEn}
+                onChange={(e) => setProjectNameEn(e.target.value)}
+                placeholder="e.g. The Forest Villa Residence Phase 2"
+                className="text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">
+                {lang === "th" ? "สังกัดฝ่ายงานหลัก (Department):" : "Assigned Department:"}
+              </label>
+              <Select
+                value={projectTeamId}
+                onChange={(e) => setProjectTeamId(e.target.value)}
+                className="text-xs"
+              >
+                {teams.map((t, idx) => (
+                  <option key={t.id} value={t.id}>
+                    {String(idx + 1).padStart(2, "0")}. {getLocalizedDynamicText(t.name, t.name_en, lang)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowProjectModal(false)}
+              >
+                {lang === "th" ? "ยกเลิก" : "Cancel"}
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+              >
+                {lang === "th" ? "บันทึกโครงการ" : "Save Project"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 4. Organization Info Card */}
       <Card className="shadow-sm">
         <CardHeader className="p-4 pb-3 border-b flex flex-row items-center gap-2">
           <Building className="h-4 w-4 text-emerald-600" />
@@ -697,7 +924,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* 4. User Profile Card */}
+      {/* 5. User Profile Card */}
       <Card className="shadow-sm">
         <CardHeader className="p-4 pb-3 border-b flex flex-row items-center gap-2">
           <User className="h-4 w-4 text-emerald-600" />

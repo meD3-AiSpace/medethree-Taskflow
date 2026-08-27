@@ -25,7 +25,7 @@ export function CreateTaskModal({
   defaultCategory = "design",
   initialDeadline = "",
 }: CreateTaskModalProps) {
-  const { createTask, projects, users } = useTaskStore();
+  const { createTask, projects, users, addProject } = useTaskStore();
   const { t, lang } = useLanguage();
 
   const [title, setTitle] = useState("");
@@ -37,6 +37,8 @@ export function CreateTaskModal({
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [deadline, setDeadline] = useState(initialDeadline || "");
   const [assigneeId, setAssigneeId] = useState(users[0]?.id || "");
+  const [showQuickNewProject, setShowQuickNewProject] = useState(false);
+  const [quickProjectName, setQuickProjectName] = useState("");
 
   // Sync initialDeadline whenever modal opens or date changes
   useEffect(() => {
@@ -193,18 +195,68 @@ export function CreateTaskModal({
             </div>
 
             <div>
-              <label className="block font-semibold mb-1">{t("projectLabel")}</label>
-              <Select
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="text-xs"
-              >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {lang === "en" && p.name_en ? p.name_en : p.name}
-                  </option>
-                ))}
-              </Select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-semibold">{t("projectLabel")}</label>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickNewProject(!showQuickNewProject)}
+                  className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold hover:underline cursor-pointer"
+                >
+                  {showQuickNewProject ? (lang === "th" ? "✕ ปิด" : "✕ Close") : (lang === "th" ? "+ เพิ่มโครงการใหม่" : "+ New Project")}
+                </button>
+              </div>
+
+              {showQuickNewProject ? (
+                <div className="space-y-1.5 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 animate-in fade-in">
+                  <Input
+                    value={quickProjectName}
+                    onChange={(e) => setQuickProjectName(e.target.value)}
+                    placeholder={lang === "th" ? "ชื่อโครงการใหม่..." : "New project name..."}
+                    className="text-xs h-7 bg-background"
+                  />
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setShowQuickNewProject(false);
+                        setQuickProjectName("");
+                      }}
+                      className="h-6 text-[10px] px-2"
+                    >
+                      {lang === "th" ? "ยกเลิก" : "Cancel"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={async () => {
+                        if (!quickProjectName.trim()) return;
+                        const trans = await translateText(quickProjectName.trim());
+                        const created = addProject(quickProjectName.trim(), trans.translatedText);
+                        setProjectId(created.id);
+                        setShowQuickNewProject(false);
+                        setQuickProjectName("");
+                      }}
+                      className="h-6 text-[10px] px-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      {lang === "th" ? "สร้างและเลือก" : "Create & Select"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Select
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  className="text-xs"
+                >
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {lang === "en" && p.name_en ? p.name_en : p.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </div>
           </div>
 

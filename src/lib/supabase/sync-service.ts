@@ -11,6 +11,7 @@ import {
   TimeEntry,
   UserProfile,
   Team,
+  Project,
   TaskAttachment,
   ActivityLog,
 } from "@/lib/types/database.types";
@@ -238,7 +239,39 @@ export class SupabaseSyncService {
     }
   }
 
-  // 13. Save Activity Log via Server API (Non-blocking async)
+  // 14. Save Project via Server API (Non-blocking async)
+  public static async saveProject(project: Partial<Project>) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_project",
+          payload: { project },
+        }),
+      }).catch((err) => console.error("[Save Project Background Error]:", err));
+    } catch (err) {
+      console.error("[Save Project Error]:", err);
+    }
+  }
+
+  // 15. Delete Project via Server API (Non-blocking async)
+  public static async deleteProject(projectId: string) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete_project",
+          payload: { projectId },
+        }),
+      }).catch((err) => console.error("[Delete Project Background Error]:", err));
+    } catch (err) {
+      console.error("[Delete Project Error]:", err);
+    }
+  }
+
+  // 16. Save Activity Log via Server API (Non-blocking async)
   public static async saveActivityLog(log: Partial<ActivityLog>) {
     try {
       fetch("/api/sync", {

@@ -627,6 +627,10 @@ interface TaskContextType {
   updateTeam: (teamId: string, name: string, nameEn?: string, description?: string) => void;
   deleteTeam: (teamId: string) => { success: boolean; message?: string };
   resetDefaultTeams: () => void;
+  // Project Actions
+  addProject: (name: string, nameEn?: string, teamId?: string) => Project;
+  updateProject: (projectId: string, name: string, nameEn?: string, teamId?: string) => void;
+  deleteProject: (projectId: string) => { success: boolean; message?: string };
   // Task Actions
   createTask: (task: Partial<Task>, permitData?: Partial<PermitDetails>) => Promise<Task>;
   updateTaskStatus: (taskId: string, newStatus: TaskStatus) => { success: boolean; message?: string };
@@ -671,7 +675,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
   const [users, setUsers] = useState<UserProfile[]>(defaultUsers);
   const [teams, setTeams] = useState<Team[]>(defaultTeams);
-  const [projects] = useState<Project[]>(defaultProjects);
+  const [projects, setProjects] = useState<Project[]>(defaultProjects);
 
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
@@ -726,6 +730,29 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       setTeams(mergedTeams);
     } else {
       setTeams(defaultTeams);
+    }
+
+    if (cloudData.projects && cloudData.projects.length > 0) {
+      const mergedProjects: Project[] = cloudData.projects.map((cp: any) => {
+        const defaultMatch = defaultProjects.find((dp) => dp.id === cp.id);
+        return {
+          id: cp.id,
+          org_id: cp.org_id || defaultOrg.id,
+          name: cp.name || defaultMatch?.name || "โครงการ",
+          name_en: cp.name_en || defaultMatch?.name_en || cp.name || "Project",
+          team_id: cp.team_id || defaultMatch?.team_id || "team-design",
+          created_at: cp.created_at || new Date().toISOString(),
+        };
+      });
+      defaultProjects.forEach((dp) => {
+        if (!mergedProjects.some((mp) => mp.id === dp.id)) {
+          mergedProjects.push(dp);
+        }
+      });
+      setProjects(mergedProjects);
+      try { localStorage.setItem("taskflow_projects", JSON.stringify(mergedProjects)); } catch {}
+    } else {
+      setProjects(defaultProjects);
     }
 
     if (cloudData.users && cloudData.users.length > 0) {
@@ -950,6 +977,41 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setTeams(updatedTeams);
     saveTeamsState(updatedTeams);
     SupabaseSyncService.deleteTeam(teamId);
+    return { success: true };
+  };
+
+  // Project Management with Full Cloud Persistence
+  const addProject = (name: string, nameEn?: string, teamId?: string): Project => {
+    const newProject: Project = {
+      id: `p-${Date.now()}`,
+      org_id: defaultOrg.id,
+      name,
+      name_en: nameEn || name,
+      team_id: teamId || teams[0]?.id || "team-design",
+      created_at: new Date().toISOString(),
+    };
+    const updated = [...projects, newProject];
+    setProjects(updated);
+    try { localStorage.setItem("taskflow_projects", JSON.stringify(updated)); } catch {}
+    SupabaseSyncService.saveProject(newProject);
+    return newProject;
+  };
+
+  const updateProject = (projectId: string, name: string, nameEn?: string, teamId?: string) => {
+    const updated = projects.map((p) => (p.id === projectId ? { ...p, name, name_en: nameEn || p.name_en, team_id: teamId || p.team_id } : p));
+    setProjects(updated);
+    try { localStorage.setItem("taskflow_projects", JSON.stringify(updated)); } catch {}
+    SupabaseSyncService.saveProject({ id: projectId, name, name_en: nameEn, team_id: teamId });
+  };
+
+  const deleteProject = (projectId: string): { success: boolean; message?: string } => {
+    if (projects.length <= 1) {
+      return { success: false, message: "ไม่สามารถลบโครงการสุดท้ายได้" };
+    }
+    const updated = projects.filter((p) => p.id !== projectId);
+    setProjects(updated);
+    try { localStorage.setItem("taskflow_projects", JSON.stringify(updated)); } catch {}
+    SupabaseSyncService.deleteProject(projectId);
     return { success: true };
   };
 
@@ -1618,6 +1680,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         updateTeam,
         deleteTeam,
         resetDefaultTeams,
+        addProject,
+        updateProject,
+        deleteProject,
         createTask,
         updateTaskStatus,
         updateTaskDetails,

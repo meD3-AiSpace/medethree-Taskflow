@@ -212,6 +212,27 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, message: "Team deleted from cloud" });
       }
 
+      case "save_project": {
+        const { project } = payload;
+        const dbProject = {
+          id: project.id,
+          org_id: project.org_id || "11111111-1111-1111-1111-111111111111",
+          name: project.name,
+          team_id: project.team_id || null,
+          created_at: project.created_at || new Date().toISOString(),
+        };
+        const { error: pErr } = await supabase.from("projects").upsert(dbProject);
+        if (pErr) throw pErr;
+        return NextResponse.json({ success: true, message: "Project saved to cloud" });
+      }
+
+      case "delete_project": {
+        const { projectId } = payload;
+        const { error: dpErr } = await supabase.from("projects").delete().eq("id", projectId);
+        if (dpErr) throw dpErr;
+        return NextResponse.json({ success: true, message: "Project deleted from cloud" });
+      }
+
       case "save_attachment": {
         const { attachment } = payload;
         const dbAtt = {
