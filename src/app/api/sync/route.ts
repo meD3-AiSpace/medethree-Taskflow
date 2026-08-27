@@ -168,6 +168,50 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, message: "Time entry saved to cloud" });
       }
 
+      case "save_user": {
+        const { user } = payload;
+        const dbUser = {
+          id: user.id,
+          org_id: user.org_id || "11111111-1111-1111-1111-111111111111",
+          full_name: user.full_name,
+          email: user.email,
+          role: user.role || "member",
+          team_id: user.team_id || null,
+          line_user_id: user.line_user_id || null,
+          created_at: user.created_at || new Date().toISOString(),
+        };
+        const { error: uErr } = await supabase.from("users").upsert(dbUser);
+        if (uErr) throw uErr;
+        return NextResponse.json({ success: true, message: "User saved to cloud" });
+      }
+
+      case "delete_user": {
+        const { userId } = payload;
+        const { error: dErr } = await supabase.from("users").delete().eq("id", userId);
+        if (dErr) throw dErr;
+        return NextResponse.json({ success: true, message: "User deleted from cloud" });
+      }
+
+      case "save_team": {
+        const { team } = payload;
+        const dbTeam = {
+          id: team.id,
+          org_id: team.org_id || "11111111-1111-1111-1111-111111111111",
+          name: team.name,
+          created_at: team.created_at || new Date().toISOString(),
+        };
+        const { error: tErr } = await supabase.from("teams").upsert(dbTeam);
+        if (tErr) throw tErr;
+        return NextResponse.json({ success: true, message: "Team saved to cloud" });
+      }
+
+      case "delete_team": {
+        const { teamId } = payload;
+        const { error: dtErr } = await supabase.from("teams").delete().eq("id", teamId);
+        if (dtErr) throw dtErr;
+        return NextResponse.json({ success: true, message: "Team deleted from cloud" });
+      }
+
       default:
         return NextResponse.json({ success: false, error: `Unknown action: ${action}` }, { status: 400 });
     }

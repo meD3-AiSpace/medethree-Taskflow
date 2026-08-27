@@ -9,6 +9,8 @@ import {
   TaskIssue,
   PermitDetails,
   TimeEntry,
+  UserProfile,
+  Team,
 } from "@/lib/types/database.types";
 
 export class SupabaseSyncService {
@@ -135,6 +137,70 @@ export class SupabaseSyncService {
       }).catch((err) => console.error("[Save Time Entry Background Error]:", err));
     } catch (err) {
       console.error("[Save Time Entry Error]:", err);
+    }
+  }
+
+  // 7. Save User via Server API (Non-blocking async)
+  public static async saveUser(user: Partial<UserProfile>) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_user",
+          payload: { user },
+        }),
+      }).catch((err) => console.error("[Save User Background Error]:", err));
+    } catch (err) {
+      console.error("[Save User Error]:", err);
+    }
+  }
+
+  // 8. Delete User via Server API (Non-blocking async)
+  public static async deleteUser(userId: string) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete_user",
+          payload: { userId },
+        }),
+      }).catch((err) => console.error("[Delete User Background Error]:", err));
+    } catch (err) {
+      console.error("[Delete User Error]:", err);
+    }
+  }
+
+  // 9. Save Team via Server API (Non-blocking async)
+  public static async saveTeam(team: Partial<Team>) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_team",
+          payload: { team },
+        }),
+      }).catch((err) => console.error("[Save Team Background Error]:", err));
+    } catch (err) {
+      console.error("[Save Team Error]:", err);
+    }
+  }
+
+  // 10. Delete Team via Server API (Non-blocking async)
+  public static async deleteTeam(teamId: string) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete_team",
+          payload: { teamId },
+        }),
+      }).catch((err) => console.error("[Delete Team Background Error]:", err));
+    } catch (err) {
+      console.error("[Delete Team Error]:", err);
     }
   }
 }

@@ -740,6 +740,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         }
       });
       setUsers(mergedUsers);
+      saveUsersState(mergedUsers);
+
+      // Auto-update current active user if changed in cloud
+      const currentMatch = mergedUsers.find((u) => u.id === currentUser.id);
+      if (currentMatch) {
+        setCurrentUser(currentMatch);
+      }
     } else {
       setUsers(defaultUsers);
     }
@@ -768,27 +775,49 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Load from Supabase Cloud once on initial mount (Zero Background Polling / Zero WebSocket overhead)
+  // Multi-Device Auto-Sync: Initial Mount + Window Focus + 15s Gentle Background Heartbeat
   useEffect(() => {
     let isMounted = true;
-    const initialLoad = async () => {
+    const fetchLatest = async (silent = false) => {
       try {
-        setIsSyncing(true);
+        if (!silent) setIsSyncing(true);
         const cloudData = await SupabaseSyncService.fetchCloudData();
         if (isMounted && cloudData) {
           applyCloudData(cloudData);
         }
       } catch (err) {
-        console.warn("[Cloud Data Initial Load Fallback]:", err);
+        console.warn("[Cloud Data Auto-Sync Error]:", err);
       } finally {
-        if (isMounted) setIsSyncing(false);
+        if (isMounted && !silent) setIsSyncing(false);
       }
     };
 
-    initialLoad();
+    // 1. Initial Load on Mount
+    fetchLatest(false);
+
+    // 2. Window Focus Sync (When switching back to this browser tab or unlocking device)
+    const handleFocus = () => {
+      fetchLatest(true);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchLatest(true);
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // 3. Gentle Background Heartbeat (every 15 seconds)
+    const interval = setInterval(() => {
+      fetchLatest(true);
+    }, 15000);
 
     return () => {
       isMounted = false;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      clearInterval(interval);
     };
   }, []);
 
@@ -819,7 +848,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     saveTeamsState(defaultTeams);
   };
 
-  // User Management
+  // User Management with Full Cloud Persistence
   const addUser = (userData: {
     full_name: string;
     email: string;
@@ -841,6 +870,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);
     saveUsersState(updatedUsers);
+    SupabaseSyncService.saveUser(newUser);
     return newUser;
   };
 
@@ -848,6 +878,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedUsers = users.map((u) => (u.id === userId ? { ...u, ...updates } : u));
     setUsers(updatedUsers);
     saveUsersState(updatedUsers);
+    SupabaseSyncService.saveUser({ id: userId, ...updates });
 
     if (currentUser.id === userId) {
       setCurrentUser((prev) => ({ ...prev, ...updates }));
@@ -871,6 +902,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedUsers = users.filter((u) => u.id !== userId);
     setUsers(updatedUsers);
     saveUsersState(updatedUsers);
+    SupabaseSyncService.deleteUser(userId);
 
     if (currentUser.id === userId && updatedUsers.length > 0) {
       setCurrentUser(updatedUsers[0]);
@@ -878,7 +910,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     return { success: true };
   };
 
-  // Team Management
+  // Team Management with Full Cloud Persistence
   const addTeam = (name: string, nameEn?: string, description?: string): Team => {
     const newTeam: Team = {
       id: `team-${Date.now()}`,
@@ -891,6 +923,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedTeams = [...teams, newTeam];
     setTeams(updatedTeams);
     saveTeamsState(updatedTeams);
+    SupabaseSyncService.saveTeam(newTeam);
     return newTeam;
   };
 
@@ -898,6 +931,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedTeams = teams.map((t) => (t.id === teamId ? { ...t, name, name_en: nameEn || t.name_en, description: description || t.description } : t));
     setTeams(updatedTeams);
     saveTeamsState(updatedTeams);
+    SupabaseSyncService.saveTeam({ id: teamId, name, name_en: nameEn, description });
   };
 
   const deleteTeam = (teamId: string): { success: boolean; message?: string } => {
@@ -907,6 +941,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedTeams = teams.filter((t) => t.id !== teamId);
     setTeams(updatedTeams);
     saveTeamsState(updatedTeams);
+    SupabaseSyncService.deleteTeam(teamId);
     return { success: true };
   };
 
@@ -1348,6 +1383,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser((prev) => ({ ...prev, line_user_id: lineUserId }));
     }
     saveUsersState(updatedUsers);
+    SupabaseSyncService.saveUser({ id: userId, line_user_id: lineUserId });
     try {
       localStorage.setItem("taskflow_line_user_id", lineUserId);
     } catch {}
