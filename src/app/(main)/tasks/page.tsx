@@ -44,7 +44,7 @@ import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 function TasksListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { tasks, projects, users, currentUser } = useTaskStore();
+  const { tasks, projects, users, issues, currentUser } = useTaskStore();
   const { t, lang } = useLanguage();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [issueModalTask, setIssueModalTask] = useState<any>(null);
@@ -126,7 +126,9 @@ function TasksListContent() {
       const isOverdue = t.deadline && new Date(t.deadline).getTime() < now && t.status !== "completed";
       if (!isOverdue) return false;
     } else if (selectedSpecialFilter === "issues") {
-      if (!t.unresolved_issues_count || t.unresolved_issues_count <= 0) return false;
+      const hasOpenIssues = (t.unresolved_issues_count && t.unresolved_issues_count > 0) ||
+                            issues.some((i) => i.task_id === t.id && !i.is_resolved);
+      if (!hasOpenIssues) return false;
     } else if (selectedSpecialFilter === "at_risk") {
       const isAtRisk =
         t.deadline &&

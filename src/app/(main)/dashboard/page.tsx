@@ -263,7 +263,7 @@ export default function DashboardPage() {
                 return (
                   <Link
                     key={task.id}
-                    href={`/tasks/${task.id}`}
+                    href={`/tasks/${task.id}?tab=support`}
                     className="block p-3 rounded-lg border border-rose-300 dark:border-rose-800 bg-background/90 hover:bg-rose-50/60 transition-all text-xs shadow-xs"
                   >
                     <div className="flex items-center justify-between gap-1 mb-1">
