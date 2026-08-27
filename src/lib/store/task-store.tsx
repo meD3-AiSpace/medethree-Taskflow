@@ -698,13 +698,21 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       setTasks(mappedTasks);
     }
 
-    if (cloudData.teams && cloudData.teams.length >= defaultTeams.length) {
-      setTeams(cloudData.teams);
-    } else if (cloudData.teams && cloudData.teams.length > 0) {
-      const mergedTeams = [...defaultTeams];
-      cloudData.teams.forEach((ct: any) => {
-        if (!mergedTeams.some(dt => dt.id === ct.id)) {
-          mergedTeams.push(ct);
+    if (cloudData.teams && cloudData.teams.length > 0) {
+      const mergedTeams: Team[] = cloudData.teams.map((ct: any) => {
+        const defaultMatch = defaultTeams.find((dt) => dt.id === ct.id);
+        return {
+          id: ct.id,
+          org_id: ct.org_id || defaultOrg.id,
+          name: ct.name || defaultMatch?.name || "ฝ่ายงาน",
+          name_en: ct.name_en || defaultMatch?.name_en || ct.name || "Department",
+          description: ct.description || defaultMatch?.description || "",
+          created_at: ct.created_at || new Date().toISOString(),
+        };
+      });
+      defaultTeams.forEach((dt) => {
+        if (!mergedTeams.some((mt) => mt.id === dt.id)) {
+          mergedTeams.push(dt);
         }
       });
       setTeams(mergedTeams);
@@ -712,13 +720,23 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       setTeams(defaultTeams);
     }
 
-    if (cloudData.users && cloudData.users.length >= defaultUsers.length) {
-      setUsers(cloudData.users);
-    } else if (cloudData.users && cloudData.users.length > 0) {
-      const mergedUsers = [...defaultUsers];
-      cloudData.users.forEach((cu: any) => {
-        if (!mergedUsers.some(du => du.id === cu.id)) {
-          mergedUsers.push(cu);
+    if (cloudData.users && cloudData.users.length > 0) {
+      const mergedUsers: UserProfile[] = cloudData.users.map((cu: any) => {
+        const defaultMatch = defaultUsers.find((du) => du.id === cu.id);
+        return {
+          id: cu.id,
+          org_id: cu.org_id || defaultOrg.id,
+          full_name: cu.full_name || defaultMatch?.full_name || "ผู้ใช้งาน",
+          email: cu.email || defaultMatch?.email || "user@medtree.com",
+          role: (cu.role || defaultMatch?.role || "member") as UserRole,
+          team_id: cu.team_id || defaultMatch?.team_id || "team-consult",
+          line_user_id: cu.line_user_id || defaultMatch?.line_user_id || undefined,
+          created_at: cu.created_at || new Date().toISOString(),
+        };
+      });
+      defaultUsers.forEach((du) => {
+        if (!mergedUsers.some((mu) => mu.id === du.id)) {
+          mergedUsers.push(du);
         }
       });
       setUsers(mergedUsers);

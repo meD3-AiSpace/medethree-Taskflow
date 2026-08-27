@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Users,
-  Shield,
   Plus,
   Mail,
   Smartphone,
@@ -24,9 +23,7 @@ import {
   UserCheck,
   Building,
   UserPlus,
-  ShieldCheck,
   RotateCcw,
-  Sparkles,
   Search,
 } from "lucide-react";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
@@ -42,10 +39,12 @@ export default function TeamsPage() {
     deleteUser,
     addTeam,
     updateTeam,
-    deleteTeam,
     resetDefaultTeams,
   } = useTaskStore();
   const { t, lang } = useLanguage();
+
+  const safeTeams = Array.isArray(teams) ? teams : [];
+  const safeUsers = Array.isArray(users) ? users : [];
 
   // Search & Filter
   const [searchFilter, setSearchFilter] = useState("");
@@ -57,7 +56,7 @@ export default function TeamsPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("member");
-  const [teamId, setTeamId] = useState(teams[0]?.id || "");
+  const [teamId, setTeamId] = useState(safeTeams[0]?.id || "");
   const [lineUserId, setLineUserId] = useState("");
 
   // Team Modal State
@@ -80,18 +79,19 @@ export default function TeamsPage() {
     setFullName("");
     setEmail(`user${Date.now().toString().slice(-4)}@medtree.com`);
     setRole("member");
-    setTeamId(defaultTeamId || teams[0]?.id || "");
+    setTeamId(defaultTeamId || safeTeams[0]?.id || "");
     setLineUserId("");
     setShowUserModal(true);
   };
 
   // Open Edit User Modal
   const handleOpenEditUser = (user: UserProfile) => {
+    if (!user) return;
     setEditingUserId(user.id);
-    setFullName(user.full_name);
-    setEmail(user.email);
-    setRole(user.role);
-    setTeamId(user.team_id || teams[0]?.id || "");
+    setFullName(user.full_name || "");
+    setEmail(user.email || "");
+    setRole(user.role || "member");
+    setTeamId(user.team_id || safeTeams[0]?.id || "");
     setLineUserId(user.line_user_id || "");
     setShowUserModal(true);
   };
@@ -106,7 +106,7 @@ export default function TeamsPage() {
         full_name: fullName.trim(),
         email: email.trim(),
         role,
-        team_id: teamId,
+        team_id: teamId || safeTeams[0]?.id,
         line_user_id: lineUserId.trim() || null,
       });
       showNotification(lang === "th" ? `อัปเดตข้อมูลคุณ "${fullName}" เรียบร้อยแล้ว` : `Updated ${fullName} successfully`);
@@ -115,7 +115,7 @@ export default function TeamsPage() {
         full_name: fullName.trim(),
         email: email.trim(),
         role,
-        team_id: teamId,
+        team_id: teamId || safeTeams[0]?.id,
         line_user_id: lineUserId.trim() || undefined,
       });
       showNotification(lang === "th" ? `เพิ่มสมาชิก "${fullName}" และกำหนดสิทธิ์ ${role.toUpperCase()} เรียบร้อยแล้ว` : `Added ${fullName} with ${role.toUpperCase()} role`);
@@ -126,11 +126,13 @@ export default function TeamsPage() {
 
   // Delete User
   const handleDeleteUser = (user: UserProfile) => {
-    if (confirm(lang === "th" ? `ยืนยันที่จะลบสมาชิก "${user.full_name}" หรือไม่?` : `Are you sure you want to delete ${user.full_name}?`)) {
+    if (!user) return;
+    const confirmName = user.full_name || "สมาชิกท่านนี้";
+    if (confirm(lang === "th" ? `ยืนยันที่จะลบสมาชิก "${confirmName}" หรือไม่?` : `Are you sure you want to delete ${confirmName}?`)) {
       const res = deleteUser(user.id);
-      if (res.success) {
-        showNotification(lang === "th" ? `ลบผู้ใช้ "${user.full_name}" เรียบร้อยแล้ว` : `Deleted ${user.full_name}`);
-      } else {
+      if (res?.success) {
+        showNotification(lang === "th" ? `ลบผู้ใช้ "${confirmName}" เรียบร้อยแล้ว` : `Deleted ${confirmName}`);
+      } else if (res?.message) {
         alert(res.message);
       }
     }
@@ -172,8 +174,8 @@ export default function TeamsPage() {
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {lang === "th"
-              ? `โครงสร้างฝ่ายงานทั้งหมด ${teams.length} ฝ่าย ครอบคลุมทั้งสายรับเหมาก่อสร้างและสายพัฒนาโครงการบ้านจัดสรร`
-              : `Organizational structure of ${teams.length} departments covering residential housing development and site construction`}
+              ? `โครงสร้างฝ่ายงานทั้งหมด ${safeTeams.length} ฝ่าย ครอบคลุมทั้งสายรับเหมาก่อสร้างและสายพัฒนาโครงการบ้านจัดสรร`
+              : `Organizational structure of ${safeTeams.length} departments covering residential housing development and site construction`}
           </p>
         </div>
 
@@ -188,7 +190,7 @@ export default function TeamsPage() {
                 showNotification(lang === "th" ? "รีเซ็ตโครงสร้าง 12 ฝ่ายงานมาตรฐานเรียบร้อย" : "Reset standard departments");
               }
             }}
-            className="text-xs h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+            className="text-xs h-9 gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             <span>{lang === "th" ? "รีเซ็ต 12 ฝ่ายมาตรฐาน" : "Reset 12 Depts"}</span>
@@ -204,7 +206,7 @@ export default function TeamsPage() {
               setTeamDescription("");
               setShowTeamModal(true);
             }}
-            className="text-xs h-9 gap-1.5"
+            className="text-xs h-9 gap-1.5 cursor-pointer"
           >
             <Building className="h-4 w-4 text-emerald-600" />
             <span>{lang === "th" ? "+ เพิ่มฝ่ายใหม่" : "+ Add Department"}</span>
@@ -213,7 +215,7 @@ export default function TeamsPage() {
           <Button
             size="sm"
             onClick={() => handleOpenCreateUser()}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5 shadow-sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5 shadow-sm cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
             <span>{lang === "th" ? "+ เพิ่มสมาชิก / กำหนดสิทธิ์" : "+ Add User / Set Role"}</span>
@@ -255,7 +257,7 @@ export default function TeamsPage() {
             <option value="viewer">👁️ Viewer</option>
           </select>
           <span className="text-muted-foreground text-[11px] pl-2 border-l">
-            {lang === "th" ? `ผู้ใช้งานทั้งหมด ${users.length} คน` : `Total: ${users.length} users`}
+            {lang === "th" ? `ผู้ใช้งานทั้งหมด ${safeUsers.length} คน` : `Total: ${safeUsers.length} users`}
           </span>
         </div>
       </div>
@@ -313,25 +315,31 @@ export default function TeamsPage() {
 
       {/* Teams and Users Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {teams.map((team) => {
-          let teamMembers = users.filter((u) => u.team_id === team.id);
+        {safeTeams.map((team) => {
+          if (!team || !team.id) return null;
+
+          let teamMembers = safeUsers.filter((u) => u && u.team_id === team.id);
 
           if (selectedRoleFilter !== "all") {
             teamMembers = teamMembers.filter((u) => u.role === selectedRoleFilter);
           }
 
           if (searchFilter.trim()) {
-            const q = searchFilter.toLowerCase();
-            const matchTeam = team.name.toLowerCase().includes(q) || (team.name_en && team.name_en.toLowerCase().includes(q));
+            const q = searchFilter.trim().toLowerCase();
+            const tName = (team.name || "").toLowerCase();
+            const tNameEn = (team.name_en || "").toLowerCase();
+            const matchTeam = tName.includes(q) || tNameEn.includes(q);
             if (!matchTeam) {
               teamMembers = teamMembers.filter(
-                (u) => u.full_name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+                (u) =>
+                  (u.full_name || "").toLowerCase().includes(q) ||
+                  (u.email || "").toLowerCase().includes(q)
               );
               if (teamMembers.length === 0) return null;
             }
           }
 
-          const displayTeamName = getLocalizedDynamicText(team.name, team.name_en, lang);
+          const displayTeamName = getLocalizedDynamicText(team.name || "ฝ่ายงาน", team.name_en, lang);
           const displayTeamDescription = getLocalizedDynamicText(team.description || "", null, lang);
 
           return (
@@ -360,12 +368,12 @@ export default function TeamsPage() {
                       variant="ghost"
                       onClick={() => {
                         setEditingTeamId(team.id);
-                        setTeamName(team.name);
+                        setTeamName(team.name || "");
                         setTeamNameEn(team.name_en || "");
                         setTeamDescription(team.description || "");
                         setShowTeamModal(true);
                       }}
-                      className="h-7 w-7 p-0"
+                      className="h-7 w-7 p-0 cursor-pointer"
                       title={lang === "th" ? "แก้ไขข้อมูลฝ่าย" : "Edit Department"}
                     >
                       <Pencil className="h-3 w-3 text-muted-foreground" />
@@ -380,23 +388,29 @@ export default function TeamsPage() {
                     </p>
                   ) : (
                     teamMembers.map((member) => {
-                      const isCurrent = currentUser.id === member.id;
-                      const displayMemberName = getLocalizedDynamicText(member.full_name, null, lang);
+                      if (!member || !member.id) return null;
+                      const isCurrent = currentUser?.id === member.id;
+                      const memberName = member.full_name || "สมาชิก";
+                      const displayMemberName = getLocalizedDynamicText(memberName, null, lang);
+                      const initialLetter = memberName.trim().charAt(0).toUpperCase() || "?";
 
                       return (
                         <div
                           key={member.id}
-                          onClick={() => router.push(`/tasks?assignee=${member.id}`)}
-                          className={`flex items-center justify-between p-2.5 rounded-xl border transition-all text-xs cursor-pointer group hover:shadow-xs hover:border-emerald-500/50 ${
+                          className={`flex items-center justify-between p-2.5 rounded-xl border transition-all text-xs group hover:shadow-xs hover:border-emerald-500/50 ${
                             isCurrent
                               ? "bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 shadow-xs"
                               : "bg-background hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 border-border"
                           }`}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            onClick={() => router.push(`/tasks?assignee=${member.id}`)}
+                            className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+                            title={lang === "th" ? `คลิกเพื่อดูกระดานงานของ ${memberName}` : `View tasks for ${memberName}`}
+                          >
                             <Avatar className="h-8 w-8 border-2 border-background shrink-0">
                               <AvatarFallback className="font-bold text-xs">
-                                {member.full_name.charAt(0)}
+                                {initialLetter}
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
@@ -413,7 +427,7 @@ export default function TeamsPage() {
                               <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5 truncate">
                                 <span className="flex items-center gap-1 truncate max-w-[140px]">
                                   <Mail className="h-2.5 w-2.5 shrink-0" />
-                                  {member.email}
+                                  {member.email || "no-email"}
                                 </span>
                                 {member.line_user_id && (
                                   <span className="text-emerald-600 font-semibold flex items-center gap-0.5 shrink-0 text-[9px]">
@@ -425,19 +439,19 @@ export default function TeamsPage() {
                             </div>
                           </div>
 
-                          {/* Right: Role & Actions */}
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Right: Role & Action Buttons */}
+                          <div className="flex items-center gap-1.5 shrink-0 pl-2">
                             <Badge
                               variant={
                                 member.role === "admin"
-                                    ? "default"
-                                    : member.role === "manager"
-                                    ? "high"
-                                    : "medium"
+                                  ? "default"
+                                  : member.role === "manager"
+                                  ? "high"
+                                  : "medium"
                               }
                               className="text-[9px] uppercase font-bold"
                             >
-                              {member.role}
+                              {member.role || "member"}
                             </Badge>
 
                             <Button
@@ -453,7 +467,7 @@ export default function TeamsPage() {
                               <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
                             </Button>
 
-                            {users.length > 1 && (
+                            {safeUsers.length > 1 && (
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -481,7 +495,7 @@ export default function TeamsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => handleOpenCreateUser(team.id)}
-                  className="w-full text-xs h-7 border-dashed gap-1 text-muted-foreground hover:text-foreground"
+                  className="w-full text-xs h-7 border-dashed gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   <Plus className="h-3 w-3" />
                   <span>{lang === "th" ? `+ เพิ่มสมาชิกเข้าฝ่ายนี้` : `+ Add Member to this department`}</span>
@@ -569,9 +583,9 @@ export default function TeamsPage() {
                   onChange={(e) => setTeamId(e.target.value)}
                   className="text-xs"
                 >
-                  {teams.map((t) => (
+                  {safeTeams.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {getLocalizedDynamicText(t.name, t.name_en, lang)}
+                      {getLocalizedDynamicText(t.name || "ฝ่ายงาน", t.name_en, lang)}
                     </option>
                   ))}
                 </Select>
@@ -603,7 +617,7 @@ export default function TeamsPage() {
                 <Button
                   type="submit"
                   size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                 >
                   {lang === "th" ? "บันทึกข้อมูลสมาชิก" : "Save Member"}
                 </Button>
@@ -678,7 +692,7 @@ export default function TeamsPage() {
                 <Button
                   type="submit"
                   size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                 >
                   {lang === "th" ? "บันทึกฝ่ายงาน" : "Save Department"}
                 </Button>
