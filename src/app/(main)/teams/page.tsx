@@ -315,7 +315,7 @@ export default function TeamsPage() {
 
       {/* Teams and Users Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {safeTeams.map((team) => {
+        {safeTeams.map((team, index) => {
           if (!team || !team.id) return null;
 
           let teamMembers = safeUsers.filter((u) => u && u.team_id === team.id);
@@ -341,20 +341,24 @@ export default function TeamsPage() {
 
           const displayTeamName = getLocalizedDynamicText(team.name || "ฝ่ายงาน", team.name_en, lang);
           const displayTeamDescription = getLocalizedDynamicText(team.description || "", null, lang);
+          const sequenceNumber = String(index + 1).padStart(2, "0");
 
           return (
-            <Card key={team.id} className="shadow-sm border flex flex-col justify-between">
+            <Card key={team.id} className="shadow-sm border flex flex-col justify-between hover:border-emerald-500/40 transition-colors">
               <div>
                 <CardHeader className="p-4 pb-3 border-b flex flex-row items-start justify-between gap-2">
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center gap-2">
+                      <span className="flex items-center justify-center h-5 w-5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold text-[10px] shrink-0 border border-emerald-300 dark:border-emerald-800">
+                        {sequenceNumber}
+                      </span>
                       <Building className="h-4 w-4 text-emerald-600 shrink-0" />
                       <CardTitle className="text-xs font-bold text-foreground truncate">
                         {displayTeamName}
                       </CardTitle>
                     </div>
                     {displayTeamDescription && (
-                      <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+                      <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed pl-7">
                         {displayTeamDescription}
                       </p>
                     )}
@@ -583,9 +587,9 @@ export default function TeamsPage() {
                   onChange={(e) => setTeamId(e.target.value)}
                   className="text-xs"
                 >
-                  {safeTeams.map((t) => (
+                  {safeTeams.map((t, idx) => (
                     <option key={t.id} value={t.id}>
-                      {getLocalizedDynamicText(t.name || "ฝ่ายงาน", t.name_en, lang)}
+                      {String(idx + 1).padStart(2, "0")}. {getLocalizedDynamicText(t.name || "ฝ่ายงาน", t.name_en, lang)}
                     </option>
                   ))}
                 </Select>
