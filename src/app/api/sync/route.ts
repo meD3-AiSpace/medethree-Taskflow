@@ -287,6 +287,28 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, message: "Activity log saved to cloud" });
       }
 
+      case "save_comment": {
+        const { comment } = payload;
+        const dbComment = {
+          id: comment.id,
+          task_id: comment.task_id,
+          user_id: comment.user_id || null,
+          content: comment.content,
+          content_en: comment.content_en || null,
+          created_at: comment.created_at || new Date().toISOString(),
+        };
+        const { error: cErr } = await supabase.from("comments").upsert(dbComment);
+        if (cErr) throw cErr;
+        return NextResponse.json({ success: true, message: "Comment saved to cloud" });
+      }
+
+      case "delete_comment": {
+        const { commentId } = payload;
+        const { error: dcErr } = await supabase.from("comments").delete().eq("id", commentId);
+        if (dcErr) throw dcErr;
+        return NextResponse.json({ success: true, message: "Comment deleted from cloud" });
+      }
+
       default:
         return NextResponse.json({ success: false, error: `Unknown action: ${action}` }, { status: 400 });
     }

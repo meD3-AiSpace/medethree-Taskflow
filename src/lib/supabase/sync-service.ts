@@ -287,4 +287,20 @@ export class SupabaseSyncService {
       console.error("[Save Activity Log Error]:", err);
     }
   }
+
+  // 17. Delete Comment via Server API (Non-blocking async)
+  public static async deleteComment(commentId: string) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete_comment",
+          payload: { commentId },
+        }),
+      }).catch((err) => console.error("[Delete Comment Background Error]:", err));
+    } catch (err) {
+      console.error("[Delete Comment Error]:", err);
+    }
+  }
 }

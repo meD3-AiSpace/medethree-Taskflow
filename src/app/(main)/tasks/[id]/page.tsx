@@ -39,6 +39,7 @@ import { PermitSection } from "@/components/tasks/permit-section";
 import { ActivityTimeline } from "@/components/tasks/activity-timeline";
 import { TimeTrackingSection } from "@/components/tasks/time-tracking-section";
 import { DeliverablesAttachmentSection } from "@/components/tasks/deliverables-attachment-section";
+import { CommentSection } from "@/components/tasks/comment-section";
 import { QuickLogIssueModal } from "@/components/tasks/quick-issue-modal";
 import { QuickAttachModal } from "@/components/tasks/quick-attach-modal";
 import { translateText } from "@/lib/i18n/auto-translate";
@@ -76,9 +77,6 @@ export default function TaskDetailPage() {
   const totalMinutes = taskTimeEntries.reduce((acc, l) => acc + (l.duration_minutes || 0), 0);
   const totalHours = (totalMinutes / 60).toFixed(1);
 
-  const [commentInput, setCommentInput] = useState("");
-  const [commentInputEn, setCommentInputEn] = useState("");
-  const [isTranslatingComment, setIsTranslatingComment] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -97,14 +95,6 @@ export default function TaskDetailPage() {
     );
   }
 
-  const handleTranslateComment = async () => {
-    if (!commentInput.trim()) return;
-    setIsTranslatingComment(true);
-    const res = await translateText(commentInput);
-    setCommentInputEn(res.translatedText);
-    setIsTranslatingComment(false);
-  };
-
   const handleStatusChange = (newStatus: TaskStatus) => {
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -116,16 +106,6 @@ export default function TaskDetailPage() {
       setSuccessMessage(t("statusUpdated", { status: getStatusLabel(newStatus, lang) }));
       setTimeout(() => setSuccessMessage(null), 4000);
     }
-  };
-
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentInput.trim()) return;
-    await addComment(task.id, commentInput, commentInputEn || undefined);
-    setCommentInput("");
-    setCommentInputEn("");
-    setSuccessMessage(lang === "th" ? "บันทึกคอมเมนต์สรุปผลงานเรียบร้อย" : "Comment / deliverable recorded successfully");
-    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   const handleDeleteTask = () => {
@@ -364,86 +344,8 @@ export default function TaskDetailPage() {
             </div>
 
             {/* Comments & Output Discussion */}
-            <div className="space-y-3 pt-4 border-t">
-              <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5 text-blue-600" />
-                <span>{lang === "th" ? "ข้อคิดเห็น & บันทึกสรุปงาน (Comments & Discussion)" : "Comments & Discussion"}</span>
-                <span className="text-[11px] text-muted-foreground font-normal">({taskComments.length})</span>
-              </h3>
-
-              <div className="space-y-2.5">
-                {taskComments.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center italic bg-muted/20 rounded-lg border border-dashed">
-                    {lang === "th" ? "ยังไม่มีข้อคิดเห็นในงานนี้ — พิมพ์บันทึกข้อความสรุปผลงานด้านล่างได้เลย" : "No comments yet — submit summary notes below"}
-                  </p>
-                ) : (
-                  taskComments.map((comm) => {
-                    const displayComment = getLocalizedDynamicText(comm.content, comm.content_en, lang);
-                    return (
-                      <div key={comm.id} className="p-3.5 rounded-xl border bg-background text-xs space-y-1.5 shadow-2xs">
-                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                          <strong className="text-foreground">{comm.user?.full_name || (lang === "th" ? "สมาชิกในทีม" : "Team Member")}</strong>
-                          <span>{formatDateTime(comm.created_at, lang)}</span>
-                        </div>
-                        <p className="text-foreground leading-relaxed">{displayComment}</p>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Add Comment Form */}
-              <form onSubmit={handleAddComment} className="pt-3 border-t space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-muted-foreground">
-                    {lang === "th" ? "พิมพ์ข้อความสรุปงาน หรือประสานงาน:" : "Add Comment / Output Summary:"}
-                  </label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleTranslateComment}
-                    disabled={isTranslatingComment || !commentInput.trim()}
-                    className="text-xs h-6 gap-1 border-emerald-500/60 text-emerald-700 dark:text-emerald-300"
-                  >
-                    <Sparkles className="h-2.5 w-2.5" />
-                    <span>{isTranslatingComment ? "กำลังแปล..." : "✨ แปลอังกฤษ"}</span>
-                  </Button>
-                </div>
-
-                <Textarea
-                  rows={3}
-                  value={commentInput}
-                  onChange={(e) => setCommentInput(e.target.value)}
-                  placeholder={lang === "th" ? "พิมพ์ข้อความสรุปผลงาน ลิงก์ไฟล์งาน หรือข้อคิดเห็น..." : "Write summary, deliverables link, or discussion..."}
-                  className="text-xs"
-                />
-
-                {commentInputEn && (
-                  <div className="p-2.5 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px]">
-                    <span className="text-emerald-800 dark:text-emerald-300 font-semibold block mb-1">
-                      🇬🇧 English Translation (AI):
-                    </span>
-                    <Textarea
-                      rows={2}
-                      value={commentInputEn}
-                      onChange={(e) => setCommentInputEn(e.target.value)}
-                      className="text-xs bg-background"
-                    />
-                  </div>
-                )}
-
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-xs"
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                    <span>{lang === "th" ? "ส่งข้อความ / ผลงาน" : "Post Note"}</span>
-                  </Button>
-                </div>
-              </form>
+            <div className="pt-4 border-t">
+              <CommentSection taskId={task.id} />
             </div>
           </TabsContent>
 

@@ -644,6 +644,8 @@ interface TaskContextType {
   updatePermitStatus: (taskId: string, newStatus: PermitStatus) => void;
   // Comments
   addComment: (taskId: string, content: string, contentEn?: string) => Promise<Comment>;
+  updateComment: (commentId: string, content: string, contentEn?: string) => Promise<void>;
+  deleteComment: (commentId: string) => Promise<void>;
   // Phase 2: Time Tracking Actions
   addTimeLog: (taskId: string, entry: Omit<TimeEntry, 'id' | 'created_at'>) => TimeEntry;
   deleteTimeLog: (taskId: string, logId: string) => void;
@@ -1438,6 +1440,44 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     return newComment;
   };
 
+  const updateComment = async (commentId: string, content: string, contentEn?: string): Promise<void> => {
+    let finalContentEn = contentEn;
+    if (!finalContentEn) {
+      const trans = await translateText(content);
+      finalContentEn = trans.translatedText;
+    }
+
+    const updatedComments = comments.map((c) =>
+      c.id === commentId ? { ...c, content, content_en: finalContentEn || c.content_en } : c
+    );
+    setComments(updatedComments);
+    try {
+      localStorage.setItem("taskflow_comments", JSON.stringify(updatedComments));
+    } catch {}
+
+    SupabaseSyncService.saveComment({ id: commentId, content, content_en: finalContentEn });
+  };
+
+  const deleteComment = async (commentId: string): Promise<void> => {
+    const target = comments.find((c) => c.id === commentId);
+    const updatedComments = comments.filter((c) => c.id !== commentId);
+    setComments(updatedComments);
+
+    if (target) {
+      const updatedTasks = tasks.map((t) =>
+        t.id === target.task_id ? { ...t, comments_count: Math.max(0, (t.comments_count || 1) - 1) } : t
+      );
+      setTasks(updatedTasks);
+      saveState(updatedTasks, issues, activityLogs);
+    }
+
+    try {
+      localStorage.setItem("taskflow_comments", JSON.stringify(updatedComments));
+    } catch {}
+
+    SupabaseSyncService.deleteComment(commentId);
+  };
+
   const markNotificationAsRead = (notifId: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n)));
   };
@@ -1692,6 +1732,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         updatePermitDetails,
         updatePermitStatus,
         addComment,
+        updateComment,
+        deleteComment,
         addTimeLog,
         deleteTimeLog,
         addAttachment,

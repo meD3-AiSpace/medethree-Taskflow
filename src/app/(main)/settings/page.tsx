@@ -34,6 +34,7 @@ import {
   Trash2,
   Building2,
   Plus,
+  Mail,
 } from "lucide-react";
 import { translateText } from "@/lib/i18n/auto-translate";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
@@ -79,8 +80,14 @@ export default function SettingsPage() {
     notify_review: currentUser?.notification_preferences?.notify_review ?? true,
     notify_deadline: currentUser?.notification_preferences?.notify_deadline ?? true,
     notify_line: currentUser?.notification_preferences?.notify_line ?? true,
+    notify_email: (currentUser?.notification_preferences as any)?.notify_email ?? true,
   });
   const [savePrefsSuccess, setSavePrefsSuccess] = useState(false);
+
+  // Email Notification Test State
+  const [testEmailAddress, setTestEmailAddress] = useState(currentUser?.email || "admin@medtree.com");
+  const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const handleSavePrefs = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,6 +185,49 @@ export default function SettingsPage() {
       });
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!testEmailAddress.trim()) return;
+    setIsSendingEmail(true);
+    setEmailResult(null);
+
+    try {
+      const res = await fetch("/api/email/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: testEmailAddress.trim(),
+          recipientName: currentUser.full_name,
+          title: lang === "th" ? "ทดสอบระบบแจ้งเตือนทางอีเมล — Lighthouse TaskFlow" : "Lighthouse TaskFlow Email Notification Test",
+          message: lang === "th"
+            ? `สวัสดีคุณ ${currentUser.full_name}! ระบบ Lighthouse TaskFlow เชื่อมต่อระบบแจ้งเตือนทางอีเมลสำเร็จเรียบร้อยแล้ว`
+            : `Hello ${currentUser.full_name}! Lighthouse TaskFlow Email Notification is functioning successfully.`,
+          taskTitle: "ทดสอบการเชื่อมต่อระบบแจ้งเตือน (Email Integration Test)",
+          type: "assignment",
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEmailResult({
+          success: true,
+          message: data.message || (lang === "th" ? "ส่งอีเมลแจ้งเตือนสำเร็จแล้ว!" : "Email notification sent!"),
+        });
+      } else {
+        setEmailResult({
+          success: false,
+          message: data.error || (lang === "th" ? "ส่งอีเมลไม่สำเร็จ" : "Failed to send email"),
+        });
+      }
+    } catch (err: any) {
+      setEmailResult({
+        success: false,
+        message: `API Error: ${err.message}`,
+      });
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -672,6 +722,25 @@ export default function SettingsPage() {
                   className="h-4 w-4 rounded accent-emerald-600 cursor-pointer"
                 />
               </div>
+
+              {/* Channel Toggle: Email Notification */}
+              <div className="p-3.5 flex items-center justify-between bg-blue-50/40 dark:bg-blue-950/20">
+                <div className="space-y-0.5 pr-4">
+                  <div className="font-semibold text-xs text-blue-800 dark:text-blue-200 flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-blue-600" />
+                    <span>{lang === "th" ? "📧 ส่งการแจ้งเตือนทางอีเมล (Email Notification)" : "📧 Transactional Email Alerts"}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {lang === "th" ? "ส่งอีเมลสรุปงาน มอบหมายงาน และแจ้งเตือนด่วนไปยังที่อยู่อีเมลของคุณ" : "Send email digests, assignment notices, and blocker alerts to your inbox"}
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={prefs.notify_email}
+                  onChange={(e) => setPrefs({ ...prefs, notify_email: e.target.checked })}
+                  className="h-4 w-4 rounded accent-blue-600 cursor-pointer"
+                />
+              </div>
             </div>
 
             {/* Save Button */}
@@ -686,13 +755,67 @@ export default function SettingsPage() {
               <Button
                 type="submit"
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 gap-1.5"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 gap-1.5 cursor-pointer"
               >
                 <Check className="h-3.5 w-3.5" />
                 <span>{lang === "th" ? "บันทึกการตั้งค่า" : "Save Preferences"}</span>
               </Button>
             </div>
           </form>
+
+          {/* Test Email Section */}
+          <div className="pt-4 border-t space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <div className="font-semibold text-foreground text-xs flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-blue-600" />
+                  <span>{lang === "th" ? "ทดสอบระบบแจ้งเตือนทางอีเมล (Email Notification Test):" : "Test Email Notification:"}</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  {lang === "th" ? "ทดสอบยิงอีเมลแจ้งเตือนงานจำลองไปยังกล่องจดหมายของคุณ" : "Send a simulated task alert email to your inbox"}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Input
+                type="email"
+                value={testEmailAddress}
+                onChange={(e) => setTestEmailAddress(e.target.value)}
+                placeholder="e.g. your-email@medtree.com"
+                className="text-xs max-w-sm"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleTestEmail}
+                disabled={isSendingEmail || !testEmailAddress.trim()}
+                className="text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+              >
+                <Send className="h-3 w-3" />
+                <span>{isSendingEmail ? (lang === "th" ? "กำลังส่งอีเมล..." : "Sending...") : (lang === "th" ? "ส่งทดสอบอีเมล" : "Test Email")}</span>
+              </Button>
+            </div>
+
+            {emailResult && (
+              <div
+                className={`p-3 rounded-lg border text-xs animate-in fade-in space-y-1 ${
+                  emailResult.success
+                    ? "bg-blue-50 dark:bg-blue-950/60 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-200"
+                    : "bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {emailResult.success ? (
+                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+                  )}
+                  <span className="font-semibold">{emailResult.message}</span>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

@@ -76,7 +76,12 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       href: "/tasks",
       icon: CheckSquare,
       badge: tasks.length,
-      activeMatch: ["/tasks", "/board", "/calendar", "/my-tasks"],
+      activeMatch: ["/tasks", "/board", "/my-tasks"],
+    },
+    {
+      label: lang === "th" ? "ปฏิทินงาน (Calendar)" : "Calendar View",
+      href: "/calendar",
+      icon: Calendar,
     },
     {
       label: t("navPermits"),
