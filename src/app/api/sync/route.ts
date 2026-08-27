@@ -212,6 +212,45 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, message: "Team deleted from cloud" });
       }
 
+      case "save_attachment": {
+        const { attachment } = payload;
+        const dbAtt = {
+          id: attachment.id,
+          task_id: attachment.task_id,
+          file_name: attachment.file_name,
+          file_url: attachment.file_url,
+          file_size_kb: attachment.compressed_size_kb || attachment.original_size_kb || 0,
+          file_type: attachment.file_type || "image",
+          uploaded_by: attachment.uploaded_by || null,
+          created_at: attachment.created_at || new Date().toISOString(),
+        };
+        const { error: aErr } = await supabase.from("attachments").upsert(dbAtt);
+        if (aErr) throw aErr;
+        return NextResponse.json({ success: true, message: "Attachment saved to cloud" });
+      }
+
+      case "delete_attachment": {
+        const { attachmentId } = payload;
+        const { error: daErr } = await supabase.from("attachments").delete().eq("id", attachmentId);
+        if (daErr) throw daErr;
+        return NextResponse.json({ success: true, message: "Attachment deleted from cloud" });
+      }
+
+      case "save_activity_log": {
+        const { log } = payload;
+        const dbLog = {
+          id: log.id,
+          task_id: log.task_id,
+          user_id: log.user_id || null,
+          action: log.action || "general_update",
+          details: log.details ? (typeof log.details === "object" ? JSON.stringify(log.details) : String(log.details)) : null,
+          created_at: log.created_at || new Date().toISOString(),
+        };
+        const { error: lErr } = await supabase.from("activity_log").insert(dbLog);
+        if (lErr) throw lErr;
+        return NextResponse.json({ success: true, message: "Activity log saved to cloud" });
+      }
+
       default:
         return NextResponse.json({ success: false, error: `Unknown action: ${action}` }, { status: 400 });
     }

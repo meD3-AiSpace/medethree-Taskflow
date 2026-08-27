@@ -685,12 +685,20 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         const taskComments = (cloudData.comments || []).filter((c: any) => c.task_id === dbTask.id);
         const taskIssues = (cloudData.issues || []).filter((i: any) => i.task_id === dbTask.id && !i.is_resolved);
 
+        // Preserve existing task assignees and attachments so they are never lost on sync
+        const existingTask = tasks.find((t) => t.id === dbTask.id) || initialTasks.find((t) => t.id === dbTask.id);
+        const taskAssignees = (existingTask?.assignees && existingTask.assignees.length > 0)
+          ? existingTask.assignees
+          : (creator ? [creator] : []);
+        const taskAtts = (cloudData.attachments || []).filter((a: any) => a.task_id === dbTask.id);
+
         return {
           ...dbTask,
           project,
           creator,
-          assignees: [],
-          permit_details: permit || undefined,
+          assignees: taskAssignees,
+          attachments: taskAtts.length > 0 ? taskAtts : (existingTask?.attachments || []),
+          permit_details: permit || existingTask?.permit_details || undefined,
           comments_count: taskComments.length,
           unresolved_issues_count: taskIssues.length,
         };
@@ -1541,6 +1549,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("taskflow_logs", JSON.stringify(updatedLogs));
     } catch {}
 
+    // Persist attachment and activity log to Supabase Cloud
+    SupabaseSyncService.saveAttachment(newAtt);
+    SupabaseSyncService.saveActivityLog(newLog);
+
     return newAtt;
   };
 
@@ -1564,6 +1576,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("taskflow_attachments", JSON.stringify(updatedAtts));
       localStorage.setItem("taskflow_tasks", JSON.stringify(updatedTasks));
     } catch {}
+
+    // Delete attachment from Supabase Cloud
+    SupabaseSyncService.deleteAttachment(attachmentId);
   };
 
   // Phase 2: Notification Preferences Actions

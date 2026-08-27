@@ -11,6 +11,8 @@ import {
   TimeEntry,
   UserProfile,
   Team,
+  TaskAttachment,
+  ActivityLog,
 } from "@/lib/types/database.types";
 
 export class SupabaseSyncService {
@@ -201,6 +203,54 @@ export class SupabaseSyncService {
       }).catch((err) => console.error("[Delete Team Background Error]:", err));
     } catch (err) {
       console.error("[Delete Team Error]:", err);
+    }
+  }
+
+  // 11. Save Attachment via Server API (Non-blocking async)
+  public static async saveAttachment(attachment: Partial<TaskAttachment>) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_attachment",
+          payload: { attachment },
+        }),
+      }).catch((err) => console.error("[Save Attachment Background Error]:", err));
+    } catch (err) {
+      console.error("[Save Attachment Error]:", err);
+    }
+  }
+
+  // 12. Delete Attachment via Server API (Non-blocking async)
+  public static async deleteAttachment(attachmentId: string) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete_attachment",
+          payload: { attachmentId },
+        }),
+      }).catch((err) => console.error("[Delete Attachment Background Error]:", err));
+    } catch (err) {
+      console.error("[Delete Attachment Error]:", err);
+    }
+  }
+
+  // 13. Save Activity Log via Server API (Non-blocking async)
+  public static async saveActivityLog(log: Partial<ActivityLog>) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_activity_log",
+          payload: { log },
+        }),
+      }).catch((err) => console.error("[Save Activity Log Background Error]:", err));
+    } catch (err) {
+      console.error("[Save Activity Log Error]:", err);
     }
   }
 }
