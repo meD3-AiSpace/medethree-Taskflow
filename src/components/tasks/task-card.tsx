@@ -122,9 +122,9 @@ export function TaskCard({ task, onDragStart }: TaskCardProps) {
         <div className="flex items-center -space-x-1.5">
           {task.assignees && task.assignees.length > 0 ? (
             task.assignees.map((assignee) => (
-              <Avatar key={assignee.id} className="h-6 w-6 border-2 border-background">
+              <Avatar key={assignee.id || Math.random().toString()} className="h-6 w-6 border-2 border-background">
                 <AvatarFallback className="text-[9px]">
-                  {assignee.full_name.charAt(0)}
+                  {(assignee?.full_name || "?").trim().charAt(0).toUpperCase() || "?"}
                 </AvatarFallback>
               </Avatar>
             ))

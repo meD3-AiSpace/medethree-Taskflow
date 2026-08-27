@@ -485,18 +485,23 @@ function TasksListContent() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-1.5">
                           {task.assignees && task.assignees.length > 0 ? (
-                            task.assignees.map((a) => (
-                              <div key={a.id} className="flex items-center gap-1">
-                                <Avatar className="h-5 w-5">
-                                  <AvatarFallback className="text-[9px]">
-                                    {a.full_name.charAt(0)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="truncate max-w-[100px] text-[11px]">
-                                  {a.full_name}
-                                </span>
-                              </div>
-                            ))
+                            task.assignees.map((a) => {
+                              if (!a) return null;
+                              const aName = a.full_name || "สมาชิก";
+                              const aInit = aName.trim().charAt(0).toUpperCase() || "?";
+                              return (
+                                <div key={a.id || Math.random().toString()} className="flex items-center gap-1">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarFallback className="text-[9px]">
+                                      {aInit}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="truncate max-w-[100px] text-[11px]">
+                                    {aName}
+                                  </span>
+                                </div>
+                              );
+                            })
                           ) : (
                             <span className="text-muted-foreground/60 italic text-[11px]">-</span>
                           )}

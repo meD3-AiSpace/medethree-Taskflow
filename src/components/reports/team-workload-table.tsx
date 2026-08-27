@@ -83,7 +83,7 @@ export function TeamWorkloadTable({
                   <div className="flex items-center gap-2.5">
                     <Avatar className="h-7 w-7">
                       <AvatarFallback className="text-[10px] font-bold">
-                        {m.name.charAt(0)}
+                        {(m?.name || "?").trim().charAt(0).toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div>

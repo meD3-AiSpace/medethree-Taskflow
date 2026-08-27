@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
-import { PermitStatus, Task } from "@/lib/types/database.types";
+import { PermitDetails, PermitStatus, Task } from "@/lib/types/database.types";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   FileCheck2,
@@ -18,9 +16,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Clock,
 } from "lucide-react";
-import { formatDate, getPermitStatusLabel } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 
@@ -31,7 +28,8 @@ export default function PermitTrackingPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
-  const permitTasks = tasks.filter((t) => t.category === "permit" && t.permit_details);
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const permitTasks = safeTasks.filter((t) => t && t.category === "permit" && t.permit_details);
 
   const permitColumns: Array<{
     status: PermitStatus;
@@ -85,6 +83,7 @@ export default function PermitTrackingPage() {
   ];
 
   const handleDragStart = (e: React.DragEvent, task: Task) => {
+    if (!task) return;
     setDraggedTaskId(task.id);
     e.dataTransfer.setData("text/plain", task.id);
   };
@@ -122,7 +121,7 @@ export default function PermitTrackingPage() {
         <Button
           size="sm"
           onClick={() => setShowCreateModal(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           <span>{lang === "th" ? "เพิ่มใบขออนุญาต" : "Add Permit Task"}</span>
@@ -174,12 +173,18 @@ export default function PermitTrackingPage() {
                   </div>
                 ) : (
                   colPermits.map((task) => {
-                    const permit = task.permit_details!;
-                    const displayTitle = getLocalizedDynamicText(task.title, task.title_en, lang);
-                    const displayType = getLocalizedDynamicText(permit.permit_type, permit.permit_type_en, lang);
-                    const displayAuth = getLocalizedDynamicText(permit.authority, permit.authority_en, lang);
+                    if (!task) return null;
+                    const permit: Partial<PermitDetails> = task.permit_details || {};
+                    const displayTitle = getLocalizedDynamicText(task.title || "ใบขออนุญาต", task.title_en, lang);
+                    const displayType = getLocalizedDynamicText(permit.permit_type || "ใบอนุญาต", permit.permit_type_en, lang);
+                    const displayAuth = getLocalizedDynamicText(permit.authority || "สำนักงานเขต", permit.authority_en, lang);
                     const rawProjectName = task.project?.name || "-";
                     const displayProject = getLocalizedDynamicText(rawProjectName, task.project?.name_en, lang);
+
+                    const firstAssignee = task.assignees?.[0];
+                    const assigneeName = firstAssignee?.full_name || "";
+                    const assigneeInitial = assigneeName.trim().charAt(0).toUpperCase() || "?";
+                    const revisionCount = permit.revision_round || 0;
 
                     return (
                       <div
@@ -191,13 +196,13 @@ export default function PermitTrackingPage() {
                       >
                         {/* Type & Revision badge */}
                         <div className="flex items-center justify-between gap-1">
-                          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded truncate">
                             {displayType}
                           </span>
-                          {permit.revision_round > 0 && (
-                            <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                          {revisionCount > 0 && (
+                            <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded-full flex items-center gap-0.5 shrink-0">
                               <RefreshCcw className="h-2.5 w-2.5" />
-                              {lang === "th" ? `แก้ ${permit.revision_round} รอบ` : `Rev ${permit.revision_round}`}
+                              {lang === "th" ? `แก้ ${revisionCount} รอบ` : `Rev ${revisionCount}`}
                             </span>
                           )}
                         </div>
@@ -225,11 +230,11 @@ export default function PermitTrackingPage() {
 
                         {/* Footer: Assignee */}
                         <div className="flex items-center justify-between pt-1 border-t text-[10px] text-muted-foreground">
-                          <span>{displayProject}</span>
-                          {task.assignees?.[0] && (
-                            <Avatar className="h-5 w-5">
+                          <span className="truncate max-w-[120px]">{displayProject}</span>
+                          {firstAssignee && (
+                            <Avatar className="h-5 w-5 shrink-0">
                               <AvatarFallback className="text-[8px]">
-                                {task.assignees[0].full_name.charAt(0)}
+                                {assigneeInitial}
                               </AvatarFallback>
                             </Avatar>
                           )}

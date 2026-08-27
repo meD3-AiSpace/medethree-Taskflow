@@ -122,11 +122,13 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
         {/* User Avatar */}
         <div className="flex items-center gap-2 pl-1.5 sm:pl-2 border-l">
           <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-            <AvatarFallback className="text-xs">{currentUser.full_name.charAt(0)}</AvatarFallback>
+            <AvatarFallback className="text-xs">
+              {(currentUser?.full_name || "?").trim().charAt(0).toUpperCase() || "?"}
+            </AvatarFallback>
           </Avatar>
           <div className="hidden xl:block text-left">
-            <div className="text-xs font-semibold leading-tight">{currentUser.full_name}</div>
-            <div className="text-[10px] text-muted-foreground">{currentUser.email}</div>
+            <div className="text-xs font-semibold leading-tight">{currentUser?.full_name || "ผู้ใช้งาน"}</div>
+            <div className="text-[10px] text-muted-foreground">{currentUser?.email || ""}</div>
           </div>
         </div>
       </div>
