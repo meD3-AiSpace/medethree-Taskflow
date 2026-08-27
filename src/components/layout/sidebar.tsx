@@ -35,12 +35,31 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const { tasks, issues, notifications, currentUser } = useTaskStore();
   const { t, lang } = useLanguage();
 
-  // Auto-close mobile menu when pathname changes
-  useEffect(() => {
+  const handleNavClick = (href: string, e: React.MouseEvent) => {
     if (mobileOpen && onCloseMobile) {
       onCloseMobile();
     }
-  }, [pathname]);
+    if (pathname === href) {
+      e.preventDefault();
+      return;
+    }
+
+    try {
+      router.push(href);
+    } catch {
+      window.location.href = href;
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      const initialPath = window.location.pathname;
+      setTimeout(() => {
+        if (window.location.pathname === initialPath && window.location.pathname !== href) {
+          window.location.href = href;
+        }
+      }, 350);
+    }
+  };
 
   const unresolvedIssuesCount = issues.filter((i) => !i.is_resolved).length;
   const unreadNotifsCount = notifications.filter((n) => !n.is_read).length;
@@ -136,10 +155,8 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 prefetch={false}
-                onClick={() => {
-                  if (mobileOpen && onCloseMobile) {
-                    onCloseMobile();
-                  }
+                onClick={(e) => {
+                  handleNavClick(item.href, e);
                 }}
                 className={cn(
                   "flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group cursor-pointer",

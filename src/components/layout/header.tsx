@@ -41,7 +41,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
         )}
 
         {/* Mobile Brand Logo */}
-        <Link href="/dashboard" className="md:hidden flex items-center">
+        <Link href="/dashboard" prefetch={false} className="md:hidden flex items-center">
           <LighthouseLogo size="xs" showText={false} />
         </Link>
 
@@ -95,7 +95,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
         </Button>
 
         {/* Notifications Direct Link Button */}
-        <Link href="/notifications" title={lang === "th" ? "การแจ้งเตือนทั้งหมด" : "All Notifications"}>
+        <Link href="/notifications" prefetch={false} title={lang === "th" ? "การแจ้งเตือนทั้งหมด" : "All Notifications"}>
           <Button
             variant="outline"
             size="icon"
