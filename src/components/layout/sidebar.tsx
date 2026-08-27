@@ -135,7 +135,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                prefetch={true}
+                prefetch={false}
                 onClick={() => {
                   if (mobileOpen && onCloseMobile) {
                     onCloseMobile();

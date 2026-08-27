@@ -46,23 +46,24 @@ export default function SettingsPage() {
   } = useTaskStore();
   const { t, lang } = useLanguage();
 
-  const [lineUserId, setLineUserId] = useState(currentUser.line_user_id || DEFAULT_LINE_USER_ID);
+  const [lineUserId, setLineUserId] = useState(currentUser?.line_user_id || DEFAULT_LINE_USER_ID);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [pushResult, setPushResult] = useState<{ success: boolean; message: string; raw?: any } | null>(null);
   const [isSending, setIsSending] = useState(false);
 
   // Phase 2: Notification Preferences State (Question 4: Choice ค)
   const [prefs, setPrefs] = useState({
-    notify_assignment: currentUser.notification_preferences?.notify_assignment ?? true,
-    notify_blocker: currentUser.notification_preferences?.notify_blocker ?? true,
-    notify_review: currentUser.notification_preferences?.notify_review ?? true,
-    notify_deadline: currentUser.notification_preferences?.notify_deadline ?? true,
-    notify_line: currentUser.notification_preferences?.notify_line ?? true,
+    notify_assignment: currentUser?.notification_preferences?.notify_assignment ?? true,
+    notify_blocker: currentUser?.notification_preferences?.notify_blocker ?? true,
+    notify_review: currentUser?.notification_preferences?.notify_review ?? true,
+    notify_deadline: currentUser?.notification_preferences?.notify_deadline ?? true,
+    notify_line: currentUser?.notification_preferences?.notify_line ?? true,
   });
   const [savePrefsSuccess, setSavePrefsSuccess] = useState(false);
 
   const handleSavePrefs = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser?.id) return;
     updateNotificationPreferences(currentUser.id, prefs);
     setSavePrefsSuccess(true);
     setTimeout(() => setSavePrefsSuccess(false), 3500);
