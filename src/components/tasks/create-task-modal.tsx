@@ -10,7 +10,7 @@ import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { TaskCategory, TaskPriority } from "@/lib/types/database.types";
 import { translateText } from "@/lib/i18n/auto-translate";
-import { FileCheck2, Sparkles, CheckCircle2 } from "lucide-react";
+import { FileCheck2, Sparkles, CheckCircle2, Trash2, Plus, Building2 } from "lucide-react";
 
 interface CreateTaskModalProps {
   open: boolean;
@@ -25,7 +25,7 @@ export function CreateTaskModal({
   defaultCategory = "design",
   initialDeadline = "",
 }: CreateTaskModalProps) {
-  const { createTask, projects, users, addProject } = useTaskStore();
+  const { createTask, projects, users, addProject, deleteProject } = useTaskStore();
   const { t, lang } = useLanguage();
 
   const [title, setTitle] = useState("");
@@ -245,17 +245,55 @@ export function CreateTaskModal({
                   </div>
                 </div>
               ) : (
-                <Select
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  className="text-xs"
-                >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {lang === "en" && p.name_en ? p.name_en : p.name}
-                    </option>
-                  ))}
-                </Select>
+                <div className="flex items-center gap-1.5">
+                  <Select
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="text-xs flex-1"
+                  >
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {lang === "en" && p.name_en ? p.name_en : p.name}
+                      </option>
+                    ))}
+                  </Select>
+
+                  {/* Delete Project Trash Can Button */}
+                  {projectId && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        const currentProj = projects.find((p) => p.id === projectId);
+                        if (!currentProj) return;
+                        if (
+                          window.confirm(
+                            lang === "th"
+                              ? `ยืนยันการลบโครงการ "${currentProj.name}" ออกจากระบบหรือไม่?`
+                              : `Are you sure you want to delete project "${currentProj.name}"?`
+                          )
+                        ) {
+                          const res = deleteProject(currentProj.id);
+                          if (res.success) {
+                            const remaining = projects.filter((p) => p.id !== currentProj.id);
+                            if (remaining.length > 0) {
+                              setProjectId(remaining[0].id);
+                            } else {
+                              setProjectId("");
+                            }
+                          } else {
+                            alert(res.message || "Cannot delete project");
+                          }
+                        }
+                      }}
+                      className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/60 border border-border/80 shrink-0 cursor-pointer"
+                      title={lang === "th" ? "ลบโครงการที่เลือก" : "Delete Selected Project"}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </div>
