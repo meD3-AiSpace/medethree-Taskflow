@@ -1,9 +1,8 @@
 // ====================================================================
-// TaskFlow — Supabase Cloud Data Sync & Realtime Service
-// High-Performance Debounced Cloud Sync with Zero UI Blocking
+// TaskFlow — Supabase Cloud Data Sync Service
+// High-Performance On-Demand Cloud Sync with Zero UI Blocking
 // ====================================================================
 
-import { createClient } from "./client";
 import {
   Task,
   Comment,
@@ -13,19 +12,9 @@ import {
 } from "@/lib/types/database.types";
 
 export class SupabaseSyncService {
-  private static broadcastChannel: any = null;
   private static pendingFetchPromise: Promise<any> | null = null;
-  private static debounceTimer: NodeJS.Timeout | null = null;
 
-  private static getClient() {
-    try {
-      return createClient();
-    } catch {
-      return null;
-    }
-  }
-
-  // 1. Fetch All Domain Data with Promise Deduplication (Prevents redundant simultaneous requests)
+  // 1. Fetch All Domain Data with Promise Deduplication & 8-Second Safety Timeout
   public static async fetchCloudData() {
     if (this.pendingFetchPromise) {
       return this.pendingFetchPromise;
@@ -69,54 +58,7 @@ export class SupabaseSyncService {
     return this.pendingFetchPromise;
   }
 
-  // 2. Broadcast and Subscribe to Realtime Cross-Device Updates with Debouncing
-  public static subscribeRealtime(onSyncRequired: () => void) {
-    const supabase = this.getClient();
-    if (!supabase) return () => {};
-
-    try {
-      const channel = supabase.channel("global-taskflow-sync", {
-        config: { broadcast: { self: false } },
-      });
-
-      channel
-        .on("broadcast", { event: "database-updated" }, () => {
-          // Debounce rapid sync notifications to prevent render cascades
-          if (this.debounceTimer) clearTimeout(this.debounceTimer);
-          this.debounceTimer = setTimeout(() => {
-            onSyncRequired();
-          }, 300);
-        })
-        .subscribe();
-
-      this.broadcastChannel = channel;
-
-      return () => {
-        if (this.debounceTimer) clearTimeout(this.debounceTimer);
-        supabase.removeChannel(channel);
-        this.broadcastChannel = null;
-      };
-    } catch (err) {
-      console.warn("[Realtime Channel Warning]:", err);
-      return () => {};
-    }
-  }
-
-  private static triggerBroadcast() {
-    try {
-      if (this.broadcastChannel) {
-        this.broadcastChannel.send({
-          type: "broadcast",
-          event: "database-updated",
-          payload: { timestamp: Date.now() },
-        });
-      }
-    } catch (err) {
-      console.warn("[Broadcast Send Warning]:", err);
-    }
-  }
-
-  // 3. Persist Task via Server API (Non-blocking async)
+  // 2. Persist Task via Server API (Non-blocking async)
   public static async saveTask(task: Partial<Task>, permitDetails?: Partial<PermitDetails>) {
     try {
       fetch("/api/sync", {
@@ -127,14 +69,12 @@ export class SupabaseSyncService {
           payload: { task, permitDetails },
         }),
       }).catch((err) => console.error("[Save Task Background Error]:", err));
-
-      this.triggerBroadcast();
     } catch (err) {
       console.error("[Save Task Error]:", err);
     }
   }
 
-  // 4. Delete Task via Server API (Non-blocking async)
+  // 3. Delete Task via Server API (Non-blocking async)
   public static async deleteTask(taskId: string) {
     try {
       fetch("/api/sync", {
@@ -145,14 +85,12 @@ export class SupabaseSyncService {
           payload: { taskId },
         }),
       }).catch((err) => console.error("[Delete Task Background Error]:", err));
-
-      this.triggerBroadcast();
     } catch (err) {
       console.error("[Delete Task Error]:", err);
     }
   }
 
-  // 5. Save Comment via Server API (Non-blocking async)
+  // 4. Save Comment via Server API (Non-blocking async)
   public static async saveComment(comment: Partial<Comment>) {
     try {
       fetch("/api/sync", {
@@ -163,14 +101,12 @@ export class SupabaseSyncService {
           payload: { comment },
         }),
       }).catch((err) => console.error("[Save Comment Background Error]:", err));
-
-      this.triggerBroadcast();
     } catch (err) {
       console.error("[Save Comment Error]:", err);
     }
   }
 
-  // 6. Save Issue via Server API (Non-blocking async)
+  // 5. Save Issue via Server API (Non-blocking async)
   public static async saveIssue(issue: Partial<TaskIssue>) {
     try {
       fetch("/api/sync", {
@@ -181,14 +117,12 @@ export class SupabaseSyncService {
           payload: { issue },
         }),
       }).catch((err) => console.error("[Save Issue Background Error]:", err));
-
-      this.triggerBroadcast();
     } catch (err) {
       console.error("[Save Issue Error]:", err);
     }
   }
 
-  // 7. Save Time Entry via Server API (Non-blocking async)
+  // 6. Save Time Entry via Server API (Non-blocking async)
   public static async saveTimeEntry(timeEntry: Partial<TimeEntry>) {
     try {
       fetch("/api/sync", {
@@ -199,8 +133,6 @@ export class SupabaseSyncService {
           payload: { timeEntry },
         }),
       }).catch((err) => console.error("[Save Time Entry Background Error]:", err));
-
-      this.triggerBroadcast();
     } catch (err) {
       console.error("[Save Time Entry Error]:", err);
     }

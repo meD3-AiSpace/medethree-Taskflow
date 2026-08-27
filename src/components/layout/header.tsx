@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Bell, Plus, ShieldCheck, UserCheck, Smartphone, Menu } from "lucide-react";
+import { Bell, Plus, Menu, RefreshCw } from "lucide-react";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
-import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 import { LighthouseLogo } from "@/components/ui/lighthouse-logo";
 
 interface HeaderProps {
@@ -18,10 +17,9 @@ interface HeaderProps {
 }
 
 export function Header({ onOpenMobileMenu }: HeaderProps) {
-  const { currentUser, setCurrentUser, users, notifications, markAllNotificationsAsRead } = useTaskStore();
+  const { currentUser, notifications, isSyncing, syncCloudData } = useTaskStore();
   const { t, lang } = useLanguage();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showNotifPopover, setShowNotifPopover] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -70,6 +68,31 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
       <div className="flex items-center gap-1.5 sm:gap-2.5">
         {/* Bilingual Flag Switcher: 🇹🇭 TH / 🇬🇧 EN */}
         <LanguageSwitcher />
+
+        {/* Manual Cloud Sync Button */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => syncCloudData()}
+          disabled={isSyncing}
+          title={
+            lang === "th"
+              ? isSyncing
+                ? "กำลังซิงค์ข้อมูลกับคลาวด์..."
+                : "กดเพื่อซิงค์ข้อมูลล่าสุดกับคลาวด์ (Cloud Sync)"
+              : isSyncing
+              ? "Syncing cloud data..."
+              : "Click to sync latest data with cloud"
+          }
+          className={`h-8 w-8 sm:h-9 sm:w-9 relative transition-all cursor-pointer ${
+            isSyncing
+              ? "bg-emerald-50 border-emerald-500 text-emerald-600 dark:bg-emerald-950"
+              : "hover:bg-emerald-50 hover:border-emerald-400 dark:hover:bg-emerald-950 text-muted-foreground hover:text-emerald-600"
+          }`}
+          aria-label="Sync cloud data"
+        >
+          <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin text-emerald-600" : ""}`} />
+        </Button>
 
         {/* Notifications Direct Link Button */}
         <Link href="/notifications" title={lang === "th" ? "การแจ้งเตือนทั้งหมด" : "All Notifications"}>

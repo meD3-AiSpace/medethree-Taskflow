@@ -653,6 +653,9 @@ interface TaskContextType {
   markAllNotificationsAsRead: () => void;
   updateLineUserId: (userId: string, lineUserId: string) => void;
   sendMockLinePush: (taskId: string, title: string, message: string) => Promise<{ success: boolean; error?: string }>;
+  // Cloud Sync
+  isSyncing: boolean;
+  syncCloudData: () => Promise<boolean>;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -670,83 +673,104 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [teams, setTeams] = useState<Team[]>(defaultTeams);
   const [projects] = useState<Project[]>(defaultProjects);
 
-  // Load from Supabase Cloud & Subscribe to Realtime Cross-Device Updates
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const applyCloudData = (cloudData: any) => {
+    if (!cloudData) return;
+    if (cloudData.tasks && cloudData.tasks.length > 0) {
+      const mappedTasks: Task[] = cloudData.tasks.map((dbTask: any) => {
+        const project = cloudData.projects?.find((p: any) => p.id === dbTask.project_id) || defaultProjects[0];
+        const creator = cloudData.users?.find((u: any) => u.id === dbTask.created_by) || defaultUsers[0];
+        const permit = cloudData.permits?.find((p: any) => p.task_id === dbTask.id);
+        const taskComments = (cloudData.comments || []).filter((c: any) => c.task_id === dbTask.id);
+        const taskIssues = (cloudData.issues || []).filter((i: any) => i.task_id === dbTask.id && !i.is_resolved);
+
+        return {
+          ...dbTask,
+          project,
+          creator,
+          assignees: [],
+          permit_details: permit || undefined,
+          comments_count: taskComments.length,
+          unresolved_issues_count: taskIssues.length,
+        };
+      });
+      setTasks(mappedTasks);
+    }
+
+    if (cloudData.teams && cloudData.teams.length >= defaultTeams.length) {
+      setTeams(cloudData.teams);
+    } else if (cloudData.teams && cloudData.teams.length > 0) {
+      const mergedTeams = [...defaultTeams];
+      cloudData.teams.forEach((ct: any) => {
+        if (!mergedTeams.some(dt => dt.id === ct.id)) {
+          mergedTeams.push(ct);
+        }
+      });
+      setTeams(mergedTeams);
+    } else {
+      setTeams(defaultTeams);
+    }
+
+    if (cloudData.users && cloudData.users.length >= defaultUsers.length) {
+      setUsers(cloudData.users);
+    } else if (cloudData.users && cloudData.users.length > 0) {
+      const mergedUsers = [...defaultUsers];
+      cloudData.users.forEach((cu: any) => {
+        if (!mergedUsers.some(du => du.id === cu.id)) {
+          mergedUsers.push(cu);
+        }
+      });
+      setUsers(mergedUsers);
+    } else {
+      setUsers(defaultUsers);
+    }
+
+    if (cloudData.comments && cloudData.comments.length > 0) setComments(cloudData.comments);
+    if (cloudData.attachments && cloudData.attachments.length > 0) setAttachments(cloudData.attachments);
+    if (cloudData.issues && cloudData.issues.length > 0) setIssues(cloudData.issues);
+    if (cloudData.timeEntries && cloudData.timeEntries.length > 0) setTimeEntries(cloudData.timeEntries);
+    if (cloudData.activityLogs && cloudData.activityLogs.length > 0) setActivityLogs(cloudData.activityLogs);
+  };
+
+  const syncCloudData = async (): Promise<boolean> => {
+    try {
+      setIsSyncing(true);
+      const cloudData = await SupabaseSyncService.fetchCloudData();
+      if (cloudData) {
+        applyCloudData(cloudData);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn("[Cloud Data Manual Sync Error]:", err);
+      return false;
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Load from Supabase Cloud once on initial mount (Zero Background Polling / Zero WebSocket overhead)
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
-    const loadCloudData = async () => {
+    let isMounted = true;
+    const initialLoad = async () => {
       try {
+        setIsSyncing(true);
         const cloudData = await SupabaseSyncService.fetchCloudData();
-        if (cloudData) {
-          if (cloudData.tasks && cloudData.tasks.length > 0) {
-            const mappedTasks: Task[] = cloudData.tasks.map((dbTask: any) => {
-              const project = cloudData.projects?.find((p: any) => p.id === dbTask.project_id) || defaultProjects[0];
-              const creator = cloudData.users?.find((u: any) => u.id === dbTask.created_by) || defaultUsers[0];
-              const permit = cloudData.permits?.find((p: any) => p.task_id === dbTask.id);
-              const taskComments = (cloudData.comments || []).filter((c: any) => c.task_id === dbTask.id);
-              const taskIssues = (cloudData.issues || []).filter((i: any) => i.task_id === dbTask.id && !i.is_resolved);
-
-              return {
-                ...dbTask,
-                project,
-                creator,
-                assignees: [],
-                permit_details: permit || undefined,
-                comments_count: taskComments.length,
-                unresolved_issues_count: taskIssues.length,
-              };
-            });
-            setTasks(mappedTasks);
-          }
-
-          if (cloudData.teams && cloudData.teams.length >= defaultTeams.length) {
-            setTeams(cloudData.teams);
-          } else if (cloudData.teams && cloudData.teams.length > 0) {
-            const mergedTeams = [...defaultTeams];
-            cloudData.teams.forEach((ct: any) => {
-              if (!mergedTeams.some(dt => dt.id === ct.id)) {
-                mergedTeams.push(ct);
-              }
-            });
-            setTeams(mergedTeams);
-          } else {
-            setTeams(defaultTeams);
-          }
-
-          if (cloudData.users && cloudData.users.length >= defaultUsers.length) {
-            setUsers(cloudData.users);
-          } else if (cloudData.users && cloudData.users.length > 0) {
-            const mergedUsers = [...defaultUsers];
-            cloudData.users.forEach((cu: any) => {
-              if (!mergedUsers.some(du => du.id === cu.id)) {
-                mergedUsers.push(cu);
-              }
-            });
-            setUsers(mergedUsers);
-          } else {
-            setUsers(defaultUsers);
-          }
-
-          if (cloudData.comments && cloudData.comments.length > 0) setComments(cloudData.comments);
-          if (cloudData.attachments && cloudData.attachments.length > 0) setAttachments(cloudData.attachments);
-          if (cloudData.issues && cloudData.issues.length > 0) setIssues(cloudData.issues);
-          if (cloudData.timeEntries && cloudData.timeEntries.length > 0) setTimeEntries(cloudData.timeEntries);
-          if (cloudData.activityLogs && cloudData.activityLogs.length > 0) setActivityLogs(cloudData.activityLogs);
+        if (isMounted && cloudData) {
+          applyCloudData(cloudData);
         }
       } catch (err) {
-        console.warn("[Cloud Data Load Fallback]:", err);
+        console.warn("[Cloud Data Initial Load Fallback]:", err);
+      } finally {
+        if (isMounted) setIsSyncing(false);
       }
     };
 
-    loadCloudData();
-
-    // Subscribe to Realtime Broadcast for instant cross-device updates
-    unsubscribe = SupabaseSyncService.subscribeRealtime(() => {
-      loadCloudData();
-    });
+    initialLoad();
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      isMounted = false;
     };
   }, []);
 
@@ -1543,6 +1567,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         markAllNotificationsAsRead,
         updateLineUserId,
         sendMockLinePush,
+        isSyncing,
+        syncCloudData,
       }}
     >
       {children}
