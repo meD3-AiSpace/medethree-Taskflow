@@ -33,10 +33,16 @@ export class SupabaseSyncService {
 
     this.pendingFetchPromise = (async () => {
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+
         const res = await fetch("/api/sync", {
           method: "GET",
           headers: { "Cache-Control": "no-cache" },
+          signal: controller.signal,
         });
+
+        clearTimeout(timeout);
 
         if (!res.ok) {
           console.warn("[Sync Fetch HTTP Status]:", res.status);
@@ -49,7 +55,11 @@ export class SupabaseSyncService {
         }
         return null;
       } catch (err) {
-        console.error("[Sync Fetch Error]:", err);
+        if (err instanceof DOMException && err.name === "AbortError") {
+          console.warn("[Sync Fetch Timeout]: Request took > 8s, skipped");
+        } else {
+          console.error("[Sync Fetch Error]:", err);
+        }
         return null;
       } finally {
         this.pendingFetchPromise = null;
