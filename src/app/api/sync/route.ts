@@ -24,6 +24,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const targetOrgId =
+      request.nextUrl.searchParams.get("org_id") || "11111111-1111-1111-1111-111111111111";
+
     const [
       tasksRes,
       projectsRes,
@@ -36,31 +39,43 @@ export async function GET(request: NextRequest) {
       timeRes,
       logsRes,
     ] = await Promise.all([
-      supabase.from("tasks").select("*").order("created_at", { ascending: false }),
-      supabase.from("projects").select("*"),
-      supabase.from("teams").select("*"),
-      supabase.from("users").select("*"),
+      supabase.from("tasks").select("*").eq("org_id", targetOrgId).order("created_at", { ascending: false }),
+      supabase.from("projects").select("*").eq("org_id", targetOrgId),
+      supabase.from("teams").select("*").eq("org_id", targetOrgId),
+      supabase.from("users").select("*").eq("org_id", targetOrgId),
       supabase.from("comments").select("*").order("created_at", { ascending: true }),
       supabase.from("attachments").select("*").order("created_at", { ascending: false }),
       supabase.from("task_issues").select("*").order("raised_at", { ascending: false }),
       supabase.from("permit_details").select("*"),
       supabase.from("time_entries").select("*").order("created_at", { ascending: false }),
-      supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(50),
+      supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(100),
     ]);
+
+    const orgTasks = tasksRes.data || [];
+    const orgTaskIds = new Set(orgTasks.map((t: any) => t.id));
+
+    // Multi-tenant strict isolation: only include child records belonging to this organization's tasks
+    const scopedComments = (commentsRes.data || []).filter((c: any) => orgTaskIds.has(c.task_id));
+    const scopedAttachments = (attachmentsRes.data || []).filter((a: any) => orgTaskIds.has(a.task_id));
+    const scopedIssues = (issuesRes.data || []).filter((i: any) => orgTaskIds.has(i.task_id));
+    const scopedPermits = (permitsRes.data || []).filter((p: any) => orgTaskIds.has(p.task_id));
+    const scopedTimeEntries = (timeRes.data || []).filter((te: any) => orgTaskIds.has(te.task_id));
+    const scopedActivityLogs = (logsRes.data || []).filter((l: any) => !l.task_id || orgTaskIds.has(l.task_id));
 
     return NextResponse.json({
       success: true,
+      org_id: targetOrgId,
       data: {
-        tasks: tasksRes.data || [],
+        tasks: orgTasks,
         projects: projectsRes.data || [],
         teams: teamsRes.data || [],
         users: usersRes.data || [],
-        comments: commentsRes.data || [],
-        attachments: attachmentsRes.data || [],
-        issues: issuesRes.data || [],
-        permits: permitsRes.data || [],
-        timeEntries: timeRes.data || [],
-        activityLogs: logsRes.data || [],
+        comments: scopedComments,
+        attachments: scopedAttachments,
+        issues: scopedIssues,
+        permits: scopedPermits,
+        timeEntries: scopedTimeEntries,
+        activityLogs: scopedActivityLogs,
       },
     });
   } catch (err: unknown) {

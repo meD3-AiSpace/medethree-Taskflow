@@ -796,7 +796,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const syncCloudData = async (): Promise<boolean> => {
     try {
       setIsSyncing(true);
-      const cloudData = await SupabaseSyncService.fetchCloudData();
+      const cloudData = await SupabaseSyncService.fetchCloudData(currentUser?.org_id || defaultOrg.id);
       if (cloudData) {
         applyCloudData(cloudData);
         return true;
@@ -816,7 +816,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const fetchLatest = async (silent = false) => {
       try {
         if (!silent) setIsSyncing(true);
-        const cloudData = await SupabaseSyncService.fetchCloudData();
+        const cloudData = await SupabaseSyncService.fetchCloudData(currentUser?.org_id || defaultOrg.id);
         if (isMounted && cloudData) {
           applyCloudData(cloudData);
         }

@@ -20,7 +20,7 @@ export class SupabaseSyncService {
   private static pendingFetchPromise: Promise<any> | null = null;
 
   // 1. Fetch All Domain Data with Promise Deduplication & 8-Second Safety Timeout
-  public static async fetchCloudData() {
+  public static async fetchCloudData(orgId?: string) {
     if (this.pendingFetchPromise) {
       return this.pendingFetchPromise;
     }
@@ -30,7 +30,8 @@ export class SupabaseSyncService {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 8000);
 
-        const res = await fetch("/api/sync", {
+        const syncUrl = orgId ? `/api/sync?org_id=${encodeURIComponent(orgId)}` : "/api/sync";
+        const res = await fetch(syncUrl, {
           method: "GET",
           headers: { "Cache-Control": "no-cache" },
           signal: controller.signal,
