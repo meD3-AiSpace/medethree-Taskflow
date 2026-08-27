@@ -100,6 +100,28 @@ export default function PermitTrackingPage() {
     setDraggedTaskId(null);
   };
 
+  const handleQuickStatusChange = (e: React.MouseEvent | React.ChangeEvent<HTMLSelectElement>, taskId: string, newStatus: PermitStatus) => {
+    e.stopPropagation();
+    updatePermitStatus(taskId, newStatus);
+  };
+
+  const getNextStage = (currentStatus: PermitStatus): { status: PermitStatus; label: string; icon: any } | null => {
+    switch (currentStatus) {
+      case "preparing":
+        return { status: "submitted", label: lang === "th" ? "ยื่นเรื่อง" : "Submit", icon: Building2 };
+      case "submitted":
+        return { status: "under_review", label: lang === "th" ? "รอพิจารณา" : "In Review", icon: Calendar };
+      case "under_review":
+        return { status: "approved", label: lang === "th" ? "อนุมัติ" : "Approve", icon: CheckCircle2 };
+      case "needs_revision":
+        return { status: "submitted", label: lang === "th" ? "ยื่นรอบใหม่" : "Resubmit", icon: RefreshCcw };
+      case "rejected":
+        return { status: "preparing", label: lang === "th" ? "เตรียมใหม่" : "Prepare", icon: RefreshCcw };
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -185,6 +207,8 @@ export default function PermitTrackingPage() {
                     const assigneeName = firstAssignee?.full_name || "";
                     const assigneeInitial = assigneeName.trim().charAt(0).toUpperCase() || "?";
                     const revisionCount = permit.revision_round || 0;
+                    const nextStage = getNextStage((permit.permit_status || "preparing") as PermitStatus);
+                    const NextIcon = nextStage?.icon || Building2;
 
                     return (
                       <div
@@ -192,7 +216,7 @@ export default function PermitTrackingPage() {
                         draggable
                         onDragStart={(e) => handleDragStart(e, task)}
                         onClick={() => router.push(`/tasks/${task.id}`)}
-                        className="group rounded-xl border bg-card p-3 shadow-xs hover:shadow-md transition-all cursor-pointer border-border hover:border-emerald-500/50 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 space-y-2 text-xs"
+                        className="group rounded-xl border bg-card p-3 shadow-xs hover:shadow-md transition-all cursor-pointer border-border hover:border-emerald-500/50 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 space-y-2 text-xs touch-pan-y"
                       >
                         {/* Type & Revision badge */}
                         <div className="flex items-center justify-between gap-1">
@@ -228,7 +252,44 @@ export default function PermitTrackingPage() {
                           )}
                         </div>
 
-                        {/* Footer: Assignee */}
+                        {/* Mobile & iPad 1-Tap Quick Move & Next Stage Action */}
+                        <div
+                          className="pt-1.5 pb-0.5 flex flex-col gap-1.5 border-t"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            {/* Quick Move Dropdown */}
+                            <select
+                              value={permit.permit_status || "preparing"}
+                              onChange={(e) => handleQuickStatusChange(e, task.id, e.target.value as PermitStatus)}
+                              className="w-full text-[10px] h-6 px-1.5 rounded bg-muted/70 hover:bg-muted font-medium border border-border/80 text-foreground cursor-pointer focus:ring-1 focus:ring-emerald-500"
+                            >
+                              <option value="preparing">📝 {t("pstPreparing")}</option>
+                              <option value="submitted">🏢 {t("pstSubmitted")}</option>
+                              <option value="under_review">⏳ {t("pstUnderReview")}</option>
+                              <option value="needs_revision">⚠️ {t("pstNeedsRevision")}</option>
+                              <option value="approved">✅ {t("pstApproved")}</option>
+                              <option value="rejected">❌ {t("pstRejected")}</option>
+                            </select>
+
+                            {/* 1-Tap Next Stage Button */}
+                            {nextStage && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => handleQuickStatusChange(e, task.id, nextStage.status)}
+                                className="h-6 px-2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/40 hover:bg-emerald-600 hover:text-white shrink-0 gap-1 cursor-pointer"
+                                title={lang === "th" ? `ย้ายไป: ${nextStage.label}` : `Move to: ${nextStage.label}`}
+                              >
+                                <NextIcon className="h-2.5 w-2.5" />
+                                <span>{nextStage.label}</span>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Footer: Assignee & Project */}
                         <div className="flex items-center justify-between pt-1 border-t text-[10px] text-muted-foreground">
                           <span className="truncate max-w-[120px]">{displayProject}</span>
                           {firstAssignee && (

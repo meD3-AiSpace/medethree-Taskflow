@@ -303,4 +303,20 @@ export class SupabaseSyncService {
       console.error("[Delete Comment Error]:", err);
     }
   }
+
+  // 18. Update Permit Status via Server API (Non-blocking async)
+  public static async updatePermitStatus(taskId: string, permitStatus: string, revisionRound: number) {
+    try {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_permit_status",
+          payload: { taskId, permitStatus, revisionRound },
+        }),
+      }).catch((err) => console.error("[Update Permit Status Background Error]:", err));
+    } catch (err) {
+      console.error("[Update Permit Status Error]:", err);
+    }
+  }
 }

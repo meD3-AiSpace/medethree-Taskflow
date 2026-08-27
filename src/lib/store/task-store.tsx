@@ -1405,8 +1405,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, issues, updatedLogs);
 
-    // Persist permit status to Supabase Cloud
-    SupabaseSyncService.saveTask({ id: taskId }, { permit_status: newStatus, revision_round: newRevisionRound });
+    // Persist permit status to Supabase Cloud directly
+    SupabaseSyncService.updatePermitStatus(taskId, newStatus, newRevisionRound);
   };
 
   const addComment = async (taskId: string, content: string, contentEn?: string): Promise<Comment> => {

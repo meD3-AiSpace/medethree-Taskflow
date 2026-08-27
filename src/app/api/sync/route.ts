@@ -309,6 +309,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, message: "Comment deleted from cloud" });
       }
 
+      case "update_permit_status": {
+        const { taskId, permitStatus, revisionRound } = payload;
+        const { error: pErr } = await supabase
+          .from("permit_details")
+          .upsert({
+            task_id: taskId,
+            permit_status: permitStatus,
+            revision_round: revisionRound ?? 0,
+          });
+        if (pErr) throw pErr;
+        return NextResponse.json({ success: true, message: "Permit status updated in cloud" });
+      }
+
       default:
         return NextResponse.json({ success: false, error: `Unknown action: ${action}` }, { status: 400 });
     }
