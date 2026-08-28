@@ -70,6 +70,7 @@ export default function TaskDetailPage() {
     comments,
     attachments,
     timeEntries,
+    users,
     addComment,
     updateTaskStatus,
     updateTaskDetails,
@@ -297,18 +298,44 @@ export default function TaskDetailPage() {
             <strong className="text-foreground text-xs">{task.creator?.full_name || "-"}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground block text-[11px]">{t("assignee")}</span>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              {task.assignees && task.assignees.length > 0 ? (
-                task.assignees.map((a) => (
-                  <strong key={a.id} className="text-foreground text-xs">
-                    {a.full_name}
-                  </strong>
-                ))
-              ) : (
-                <span className="text-muted-foreground italic">{t("unassigned")}</span>
-              )}
-            </div>
+            <span className="text-muted-foreground block text-[11px] font-semibold">{t("assignee")}</span>
+            {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
+              <select
+                value={task.assignees?.[0]?.id || ""}
+                onChange={(e) => {
+                  const newUserId = e.target.value;
+                  const targetUser = users.find((u) => u.id === newUserId);
+                  if (targetUser) {
+                    updateTaskDetails(task.id, { assignees: [targetUser] });
+                    setSuccessMessage(lang === "th" ? `เปลี่ยนผู้รับผิดชอบเป็น "${targetUser.full_name}" สำเร็จ` : `Assignee changed to "${targetUser.full_name}"`);
+                    setTimeout(() => setSuccessMessage(null), 3000);
+                  }
+                }}
+                className="mt-1 w-full text-xs font-semibold bg-background border border-emerald-500/40 text-foreground rounded-lg px-2 py-1 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer shadow-2xs hover:border-emerald-500 transition-colors"
+                title={lang === "th" ? "คลิกเพื่อเปลี่ยนผู้รับผิดชอบงานนี้" : "Click to reassign this task"}
+              >
+                {task.assignees?.length === 0 && (
+                  <option value="">{lang === "th" ? "-- เลือกผู้รับผิดชอบ --" : "-- Select Assignee --"}</option>
+                )}
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name} ({u.role})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-1.5 mt-1">
+                {task.assignees && task.assignees.length > 0 ? (
+                  task.assignees.map((a) => (
+                    <strong key={a.id} className="text-foreground text-xs">
+                      {a.full_name}
+                    </strong>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground italic">{t("unassigned")}</span>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <span className="text-muted-foreground block text-[11px]">{t("deadline")}</span>

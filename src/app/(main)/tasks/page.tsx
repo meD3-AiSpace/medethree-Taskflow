@@ -45,7 +45,7 @@ import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 function TasksListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { tasks, projects, users, issues, currentUser } = useTaskStore();
+  const { tasks, projects, users, issues, currentUser, updateTaskDetails } = useTaskStore();
   const { t, lang } = useLanguage();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [issueModalTask, setIssueModalTask] = useState<any>(null);
@@ -501,28 +501,52 @@ function TasksListContent() {
                       </td>
 
                       {/* Assignees */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {task.assignees && task.assignees.length > 0 ? (
-                            task.assignees.map((a) => {
-                              const aName = a.full_name || "สมาชิก";
-                              return (
-                                <div key={a.id} className="flex items-center gap-1" title={aName}>
-                                  <Avatar className="h-5 w-5">
-                                    <AvatarFallback className="text-[9px] bg-emerald-100 text-emerald-800 font-bold">
-                                      {aName.charAt(0).toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="truncate max-w-[100px] text-[11px]">
-                                    {aName}
-                                  </span>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <span className="text-muted-foreground/60 italic text-[11px]">-</span>
-                          )}
-                        </div>
+                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                        {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
+                          <select
+                            value={task.assignees?.[0]?.id || ""}
+                            onChange={(e) => {
+                              const newUserId = e.target.value;
+                              const targetUser = users.find((u) => u.id === newUserId);
+                              if (targetUser) {
+                                updateTaskDetails(task.id, { assignees: [targetUser] });
+                              }
+                            }}
+                            className="text-xs bg-muted/40 hover:bg-muted border border-border/60 hover:border-emerald-500 rounded px-2 py-1 text-foreground font-semibold cursor-pointer transition-colors max-w-[150px] truncate focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:bg-background"
+                            title={lang === "th" ? "คลิกเพื่อเปลี่ยนผู้รับผิดชอบ" : "Click to change assignee"}
+                          >
+                            {(!task.assignees || task.assignees.length === 0) && (
+                              <option value="">{lang === "th" ? "- เลือกผู้รับผิดชอบ -" : "- Assign -"} </option>
+                            )}
+                            {users.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.full_name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {task.assignees && task.assignees.length > 0 ? (
+                              task.assignees.map((a) => {
+                                const aName = a.full_name || "สมาชิก";
+                                return (
+                                  <div key={a.id} className="flex items-center gap-1" title={aName}>
+                                    <Avatar className="h-5 w-5">
+                                      <AvatarFallback className="text-[9px] bg-emerald-100 text-emerald-800 font-bold">
+                                        {aName.charAt(0).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="truncate max-w-[100px] text-[11px]">
+                                      {aName}
+                                    </span>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <span className="text-muted-foreground/60 italic text-[11px]">-</span>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* Deadline */}
