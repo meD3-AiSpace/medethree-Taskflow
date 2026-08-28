@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowUp } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { useTaskStore } from "@/lib/store/task-store";
@@ -15,12 +16,26 @@ export default function MainLayout({
   const router = useRouter();
   const { currentUser, isAuthInitialized } = useTaskStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (isAuthInitialized && !currentUser) {
       router.replace("/login");
     }
   }, [isAuthInitialized, currentUser, router]);
+
+  const handleScroll = () => {
+    if (mainRef.current) {
+      setShowScrollTop(mainRef.current.scrollTop > 180);
+    }
+  };
+
+  const scrollToTop = () => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   // Loading state while verifying user session
   if (!isAuthInitialized || !currentUser) {
@@ -44,11 +59,28 @@ export default function MainLayout({
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden relative">
         <Header onOpenMobileMenu={() => setMobileMenuOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 bg-muted/20 overscroll-contain touch-pan-y smooth-scroll">
+        <main
+          ref={mainRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-6 md:p-8 pb-28 sm:pb-20 md:pb-12 bg-muted/20 smooth-scroll"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">{children}</div>
         </main>
+
+        {/* Floating Quick Scroll-to-Top Button for Mobile, Tablet & Desktop */}
+        {showScrollTop && (
+          <button
+            type="button"
+            onClick={scrollToTop}
+            title="เลื่อนกลับขึ้นด้านบน (Scroll to Top)"
+            className="fixed bottom-6 right-6 z-40 p-3 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-90 text-white shadow-lg shadow-emerald-600/30 border border-emerald-400/40 backdrop-blur-sm transition-all animate-in fade-in zoom-in duration-200 cursor-pointer flex items-center justify-center group"
+          >
+            <ArrowUp className="h-5 w-5 group-hover:-translate-y-0.5 transition-transform" />
+          </button>
+        )}
       </div>
     </div>
   );
