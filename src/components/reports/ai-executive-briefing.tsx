@@ -33,8 +33,44 @@ export function AIExecutiveBriefing({
   const totalHours = (totalMinutes / 60).toFixed(1);
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
 
-  // Helper to generate default structured briefing in active language
+  // Helper to generate default structured briefing in active language (100% Grounded on Real Data)
   const generateDefaultBriefing = useCallback((currentLang: Language) => {
+    if (tasks.length === 0) {
+      if (currentLang === "en") {
+        return {
+          achievements: [
+            `No tasks or deliverables recorded in this reporting period (${periodLabel}).`,
+            `Zero work hours logged in the system for this timeframe.`,
+          ],
+          risks: [
+            "No active blockers or operational clashes reported.",
+            "Project progress tracking is currently inactive due to zero registered tasks.",
+          ],
+          nextSteps: [
+            "Click '+ Create Task' above to register project milestones and assign team members.",
+            "Define clear deadlines and allocate responsibilities across active projects.",
+            "Log working hours (Time Log) and attach blueprints/deliverables as work begins.",
+          ],
+        };
+      }
+
+      return {
+        achievements: [
+          `ยังไม่มีรายการงานที่สร้างหรือบันทึกในรอบรายงานนี้ (${periodLabel})`,
+          `ยังไม่พบชั่วโมงทำงานที่ถูกบันทึกในระบบสำหรับช่วงเวลานี้`,
+        ],
+        risks: [
+          "ไม่มีรายงานปัญหาติดขัดหรือข้อติดขัดในระบบ",
+          "ระบบยังไม่สามารถประเมินอัตราความคืบหน้าได้เนื่องจากยังไม่มีรายการงานในรอบเวลานี้",
+        ],
+        nextSteps: [
+          "กดปุ่ม '+ สร้างงานใหม่' ด้านบน เพื่อเริ่มต้นกำหนดงานและมอบหมายผู้รับผิดชอบ",
+          "กำหนดวันส่งมอบงาน (Deadline) และจัดสรรบุคลากรในแต่ละโครงการ",
+          "เมื่อเริ่มปฏิบัติงานจริง ให้ทีมงานบันทึกเวลาทำงาน (Time Log) และอัปโหลดแบบเพื่อประเมินผล",
+        ],
+      };
+    }
+
     if (currentLang === "en") {
       const topDoneTitles = completedTasks
         .slice(0, 2)
@@ -48,26 +84,30 @@ export function AIExecutiveBriefing({
 
       return {
         achievements: [
-          `Successfully delivered ${completedTasks.length} milestone tasks (overall progress: ${completionRate}%).`,
+          completedTasks.length > 0
+            ? `Successfully delivered ${completedTasks.length} of ${tasks.length} tasks (overall progress: ${completionRate}%).`
+            : `Currently executing ${tasks.length} active tasks (0 tasks completed yet).`,
           completedTasks.length > 0
             ? `Key completed deliverables: "${topDoneTitles}".`
-            : "Active operational momentum maintained across architectural design and building permit packages.",
-          `Team logged ${totalHours} man-hours of dedicated work, showing healthy workload distribution.`,
+            : `Team actively advancing ${tasks.length - completedTasks.length} tasks in progress.`,
+          `Team logged ${totalHours} man-hours of dedicated work in this period.`,
         ],
         risks:
           activeIssues.length > 0
             ? [
                 `Detected ${activeIssues.length} active blockers requiring urgent resolution: ${topIssues}.`,
-                "Unresolved engineering clashes may impact the permit submission schedule if not unblocked within 3-5 days.",
+                "Unresolved blockers should be reviewed promptly to prevent milestone delays.",
               ]
             : [
                 "Zero critical blockers currently obstructing project execution.",
-                "Maintain close tracking on near-deadline tasks to guarantee 100% on-time milestone delivery.",
+                "Maintain close tracking on near-deadline tasks to guarantee on-time delivery.",
               ],
         nextSteps: [
-          "Expedite follow-ups with municipal district offices for permit packages currently under review.",
-          "Hold a 15-minute cross-discipline coordination sync to unblock structural beam and MEP pipe clashes.",
-          "Prepare next deliverable package and perform final QA/QC inspection before supervisor review.",
+          activeIssues.length > 0
+            ? "Coordinate with relevant engineers/architects to unblock active blockers."
+            : "Continue monitoring active task milestones toward scheduled delivery dates.",
+          "Prepare upcoming deliverable packages for supervisor QA/QC review.",
+          "Keep logging work hours and attaching updated project drawings.",
         ],
       };
     }
@@ -85,29 +125,33 @@ export function AIExecutiveBriefing({
 
     return {
       achievements: [
-        `ปิดงานสำเร็จตามเป้าหมายจำนวน ${completedTasks.length} รายการ (คิดเป็นความคืบหน้าภาพรวม ${completionRate}%)`,
+        completedTasks.length > 0
+          ? `ปิดงานสำเร็จตามเป้าหมายจำนวน ${completedTasks.length} / ${tasks.length} รายการ (คิดเป็นความคืบหน้า ${completionRate}%)`
+          : `กำลังดำเนินงานอยู่ ${tasks.length} รายการ (ยังไม่มีงานที่ปิดสมบูรณ์ในรอบนี้)`,
         completedTasks.length > 0
           ? `งานสำคัญที่ส่งมอบเรียบร้อย: "${topDoneTitlesTh}"`
-          : "มีการระดมกำลังทำงานในส่วนงานออกแบบและงานขออนุญาตก่อสร้างอย่างต่อเนื่อง",
-        `ทีมงานบันทึกเวลาปฏิบัติงานจริงรวม ${totalHours} ชั่วโมง แสดงถึงความต่อเนื่องในการลงมือทำ`,
+          : `ทีมงานกำลังขับเคลื่อนงานที่กำลังดำเนินการจำนวน ${tasks.length - completedTasks.length} รายการ`,
+        `ทีมงานบันทึกเวลาปฏิบัติงานจริงรวม ${totalHours} ชั่วโมง ในรอบเวลานี้`,
       ],
       risks:
         activeIssues.length > 0
           ? [
               `พบจุดติดขัดที่ต้องประสานงานแก้ไขเร่งด่วน ${activeIssues.length} รายการ: ${topIssuesTh}`,
-              "งานที่ติดปัญหาอาจส่งผลกระทบต่อกำหนดส่งมอบแบบหรือการยื่นขออนุญาต หากไม่ได้รับการตัดสินใจภายใน 3-5 วัน",
+              "ควรเร่งปลดล็อกปัญหาติดขัดเพื่อป้องกันผลกระทบต่อกำหนดส่งมอบงาน",
             ]
           : [
               "ไม่มีจุดติดขัดรุนแรงที่ขัดขวางโครงการในขณะนี้",
-              "ควรเฝ้าระวังงานที่ใกล้ถึงกำหนดส่ง (Due Soon) เพื่อรักษาระดับ On-time Delivery ให้ได้ 100%",
+              "ควรเฝ้าระวังงานที่ใกล้ถึงกำหนดส่ง (Due Soon) เพื่อรักษาระดับ On-time Delivery ให้สมบูรณ์",
             ],
       nextSteps: [
-        "เร่งติดตามและประสานงานหน่วยงานผู้อนุญาตสำหรับใบคำขอที่อยู่ระหว่างพิจารณา (Under Review)",
-        "จัดประชุม Quick Sync ย่อย 15 นาที เพื่อปลดล็อกปัญหาติดขัดกับฝ่ายวิศวกรโครงสร้างและสุขาภิบาล",
-        "เตรียมชุดเอกสารส่งมอบงวดถัดไป และตรวจสอบแบบครั้งสุดท้ายก่อนส่งตรวจรับ (Review)",
+        activeIssues.length > 0
+          ? "ประสานงานกับทีมงานผู้รับผิดชอบเพื่อเร่งแก้ไขประเด็นติดขัดที่ระบุไว้"
+          : "ติดตามความคืบหน้าของงานที่กำลังดำเนินการให้เป็นไปตามกำหนดส่ง",
+        "เตรียมชุดเอกสารส่งมอบงวดถัดไป และตรวจสอบแบบก่อนส่งตรวจรับ (Review)",
+        "บันทึกชั่วโมงทำงานและอัปโหลดไฟล์ผลงานอย่างต่อเนื่อง",
       ],
     };
-  }, [completedTasks, activeIssues, completionRate, totalHours]);
+  }, [tasks.length, completedTasks, activeIssues, completionRate, totalHours, periodLabel]);
 
   const [briefing, setBriefing] = useState<{
     achievements: string[];

@@ -40,6 +40,49 @@ export async function POST(req: NextRequest) {
 
     const { periodLabel, tasksCount, completedCount, completedTitles, blockersList, totalHours, lang } = parseResult.data;
 
+    // Truthful Immediate Response when 0 tasks exist (Zero Hallucination Guarantee)
+    if (tasksCount === 0) {
+      if (lang === "en") {
+        return NextResponse.json({
+          success: true,
+          briefing: {
+            achievements: [
+              `No tasks or deliverables recorded in this reporting period (${periodLabel}).`,
+              `Zero work hours logged in the system for this timeframe.`,
+            ],
+            risks: [
+              "No active blockers or operational clashes reported.",
+              "Project progress tracking is currently inactive due to zero registered tasks.",
+            ],
+            nextSteps: [
+              "Click '+ Create Task' to register project milestones and assign team members.",
+              "Define clear deadlines and allocate responsibilities across active projects.",
+              "Log working hours (Time Log) and attach blueprints/deliverables as work begins.",
+            ],
+          },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        briefing: {
+          achievements: [
+            `ยังไม่มีรายการงานที่สร้างหรือบันทึกในรอบรายงานนี้ (${periodLabel})`,
+            `ยังไม่พบชั่วโมงทำงานที่ถูกบันทึกในระบบสำหรับช่วงเวลานี้`,
+          ],
+          risks: [
+            "ไม่มีรายงานปัญหาติดขัดหรือข้อติดขัดในระบบ",
+            "ระบบยังไม่สามารถประเมินอัตราความคืบหน้าได้เนื่องจากยังไม่มีรายการงานในรอบเวลานี้",
+          ],
+          nextSteps: [
+            "กดปุ่ม '+ สร้างงานใหม่' ด้านบน เพื่อเริ่มต้นกำหนดงานและมอบหมายผู้รับผิดชอบ",
+            "กำหนดวันส่งมอบงาน (Deadline) และจัดสรรบุคลากรในแต่ละโครงการ",
+            "เมื่อเริ่มปฏิบัติงานจริง ให้ทีมงานบันทึกเวลาทำงาน (Time Log) และอัปโหลดแบบเพื่อประเมินผล",
+          ],
+        },
+      });
+    }
+
     const geminiKey = process.env.GEMINI_API_KEY || "";
 
     if (!geminiKey || geminiKey.startsWith("mock-") || geminiKey === "your_gemini_api_key_here") {
@@ -49,7 +92,9 @@ export async function POST(req: NextRequest) {
     const prompt =
       lang === "en"
         ? `You are an Executive Project Director at MedTree Design & Build (Architecture & Construction).
-Please analyze the operational data for the reporting period: "${periodLabel}"
+STRICT GROUNDING RULE: Analyze ONLY the provided real operational facts. DO NOT invent, hallucinate, or assume any deliverables, meetings, or problems that are not explicitly provided.
+
+Operational Data for Period: "${periodLabel}"
 - Total Tasks: ${tasksCount} (Completed: ${completedCount})
 - Completed Task Titles: ${completedTitles || "None"}
 - Active Blockers: ${blockersList || "None"}
@@ -57,12 +102,14 @@ Please analyze the operational data for the reporting period: "${periodLabel}"
 
 Please respond in JSON ONLY (with fluent, professional English) following this exact structure:
 {
-  "achievements": ["Key accomplishment bullet 1", "Key accomplishment bullet 2", "Key accomplishment bullet 3"],
-  "risks": ["Critical risk/blocker bullet 1", "Critical risk/blocker bullet 2"],
-  "nextSteps": ["Strategic actionable next step 1", "Strategic actionable next step 2", "Strategic actionable next step 3"]
+  "achievements": ["Grounded accomplishment bullet based only on provided tasks and hours"],
+  "risks": ["Grounded risk/blocker bullet based only on provided blockers list"],
+  "nextSteps": ["Grounded actionable next step related to provided tasks"]
 }`
         : `คุณคือผู้เชี่ยวชาญด้านการจัดการสถาปัตยกรรมและการก่อสร้าง (Executive Project Director) ของบริษัท MedTree Design & Build
-กรุณาวิเคราะห์ข้อมูลการดำเนินงานประจำช่วงเวลา: "${periodLabel}"
+กฎเหล็กด้านความจริงใจ (Strict Grounding): วิเคราะห์เฉพาะตัวเลข ชื่องาน และปัญหาที่ให้มาจริงเท่านั้น ห้ามแต่งเติมงานสมมุติ ห้ามสร้างการประชุมสมมุติ หรือปัญหาที่ไม่มีอยู่จริงโดยเด็ดขาด
+
+ข้อมูลการดำเนินงานประจำช่วงเวลา: "${periodLabel}"
 - งานทั้งหมด: ${tasksCount} งาน (ปิดแล้ว: ${completedCount} งาน)
 - รายชื่องานที่ปิดแล้ว: ${completedTitles || "ไม่มี"}
 - ปัญหาที่ติดขัดอยู่ (Active Blockers): ${blockersList || "ไม่มีปัญหาติดขัด"}
@@ -70,9 +117,9 @@ Please respond in JSON ONLY (with fluent, professional English) following this e
 
 โปรดสรุปผลการวิเคราะห์ในรูปแบบ JSON ภาษาไทยเท่านั้น โดยมีโครงสร้าง:
 {
-  "achievements": ["ข้อความสรุปผลงานเด่น 1-3 ข้อ"],
-  "risks": ["ข้อความจุดเสี่ยง/ปัญหาที่ต้องระวัง 1-2 ข้อ"],
-  "nextSteps": ["ข้อเสนอแนะแผนปฏิบัติการสัปดาห์ถัดไป 2-3 ข้อ"]
+  "achievements": ["ข้อความสรุปผลงานตามข้อมูลจริง 1-3 ข้อ"],
+  "risks": ["ข้อความจุดเสี่ยง/ปัญหาตามข้อมูลจริง 1-2 ข้อ"],
+  "nextSteps": ["ข้อเสนอแนะแผนปฏิบัติการที่ตรงกับงานจริง 2-3 ข้อ"]
 }`;
 
     const controller = new AbortController();
