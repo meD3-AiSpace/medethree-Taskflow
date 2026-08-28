@@ -200,14 +200,16 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
                 <span>{lang === "th" ? "🔄 สลับโปรไฟล์ผู้ใช้ (Switch Profile)" : "🔄 Switch User Profile"}</span>
               </button>
 
-              <Link
-                href="/settings"
-                onClick={() => setShowUserMenu(false)}
-                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-muted text-foreground font-medium transition-colors cursor-pointer text-left"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                <span>{lang === "th" ? "⚙️ การตั้งค่าระบบ (Settings)" : "⚙️ System Settings"}</span>
-              </Link>
+              {currentUser?.role === "admin" && (
+                <Link
+                  href="/settings"
+                  onClick={() => setShowUserMenu(false)}
+                  className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-muted text-foreground font-medium transition-colors cursor-pointer text-left"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>{lang === "th" ? "⚙️ การตั้งค่าระบบ (Settings)" : "⚙️ System Settings"}</span>
+                </Link>
+              )}
 
               <div className="border-t pt-1">
                 <button

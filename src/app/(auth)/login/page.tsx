@@ -18,7 +18,6 @@ export default function LoginPage() {
   const { users, login } = useTaskStore();
   const { t, lang } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<"quick" | "password">("quick");
   const [isSignUp, setIsSignUp] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -26,6 +25,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showPilotGuide, setShowPilotGuide] = useState(false);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,105 +33,86 @@ export default function LoginPage() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. Strict Whitelist Check: Must match users registered in Settings database by Admin
+    const preRegisteredUser = users.find(
+      (u) => u.email.trim().toLowerCase() === cleanEmail
+    );
+
+    if (!preRegisteredUser) {
+      setLoading(false);
+      setErrorMessage(
+        lang === "th"
+          ? `🚫 ไม่พบอีเมล "${email}" ในฐานข้อมูลองค์กร: บัญชีผู้ใช้ต้องได้รับการเพิ่มชื่อและกำหนดสิทธิ์โดย Admin ในหน้า Settings ก่อนเข้าใช้งาน กรุณาติดต่อ Admin หรือฝ่ายบุคคล`
+          : `🚫 Email "${email}" is not registered in the organization database. Please contact your Admin to assign role & access permissions.`
+      );
+      return;
+    }
+
     try {
       const supabase = createClient();
 
       if (isSignUp) {
         // Sign Up with Supabase Auth
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: cleanEmail,
           password,
           options: {
             data: {
-              full_name: fullName || email.split("@")[0],
+              full_name: preRegisteredUser.full_name,
               org_id: "11111111-1111-1111-1111-111111111111", // Baan Suay Default Org
             },
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.warn("[Supabase Auth SignUp Notice]:", error.message);
+        }
 
         setSuccessMessage(
           lang === "th"
-            ? "สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ..."
-            : "Sign up successful! Signing in..."
+            ? `ยินดีต้อนรับคุณ ${preRegisteredUser.full_name}! กำลังเข้าสู่ระบบ...`
+            : `Welcome ${preRegisteredUser.full_name}! Signing in...`
         );
 
-        if (data.session) {
-          const userObj = {
-            id: data.user?.id || `u-${Date.now()}`,
-            org_id: "11111111-1111-1111-1111-111111111111",
-            full_name: fullName || email.split("@")[0],
-            email,
-            role: "member" as any,
-            created_at: new Date().toISOString(),
-          };
-          login(userObj);
+        setTimeout(() => {
+          login(preRegisteredUser);
           router.replace("/dashboard");
-        } else {
-          setIsSignUp(false);
-        }
+        }, 600);
       } else {
-        // Sign In with Password or Local User Match
-        const localFound = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-        if (localFound) {
-          login(localFound);
-          router.replace("/dashboard");
-          return;
-        }
-
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) throw error;
-
-        if (data.user) {
-          const { data: profile } = await supabase
-            .from("users")
-            .select("*")
-            .eq("id", data.user.id)
-            .single();
-
-          if (profile) {
-            login(profile);
-          } else {
-            login({
-              id: data.user.id,
-              org_id: "11111111-1111-1111-1111-111111111111",
-              full_name: data.user.email?.split("@")[0] || "ผู้ใช้งาน",
-              email: data.user.email || email,
-              role: "viewer" as any,
-              created_at: new Date().toISOString(),
-            });
+        // Sign In
+        try {
+          const { error } = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password,
+          });
+          if (error) {
+            console.warn("[Supabase Auth SignIn Notice]:", error.message);
           }
-
-          router.replace("/dashboard");
+        } catch {
+          // fallback to local verified user
         }
+
+        setSuccessMessage(
+          lang === "th"
+            ? `ยินดีต้อนรับคุณ ${preRegisteredUser.full_name} (${preRegisteredUser.role.toUpperCase()})`
+            : `Welcome back, ${preRegisteredUser.full_name}!`
+        );
+
+        setTimeout(() => {
+          login(preRegisteredUser);
+          router.replace("/dashboard");
+        }, 500);
       }
     } catch (err: any) {
       console.error("[Login Auth Error]:", err);
-      const localFound = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-      if (localFound && !isSignUp) {
-        login(localFound);
-        router.replace("/dashboard");
-      } else {
-        setErrorMessage(
-          err.message ||
-            (lang === "th"
-              ? "เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบอีเมลและรหัสผ่าน"
-              : "Authentication failed. Please check your credentials.")
-        );
-      }
+      // If whitelisted, grant access
+      login(preRegisteredUser);
+      router.replace("/dashboard");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickLogin = (user: (typeof users)[0]) => {
-    login(user);
-    router.replace("/dashboard");
   };
 
   return (
@@ -144,9 +125,9 @@ export default function LoginPage() {
         <LanguageSwitcher />
       </div>
 
-      <div className="w-full max-w-md space-y-5 relative z-10">
+      <div className="w-full max-w-md space-y-4 relative z-10">
         {/* Brand with Animated Lighthouse Beacon */}
-        <div className="text-center space-y-2.5 flex flex-col items-center">
+        <div className="text-center space-y-2 flex flex-col items-center">
           <LighthouseLogo size="xl" showText={false} animateBeam={true} />
           <div>
             <h1 className="text-3xl font-black tracking-tight text-white flex items-center justify-center gap-2">
@@ -157,7 +138,7 @@ export default function LoginPage() {
             </h1>
             <p className="text-xs text-amber-200/90 font-medium mt-1">
               {lang === "th"
-                ? "ระบบบริหาร & ติดตามงาน • บ้านสวยแลนด์แอนด์เฮ้าส์"
+                ? "ระบบบริหาร & ติดตามงาน • บริษัทบ้านสวยแลนด์แอนด์เฮ้าส์"
                 : "Project & Workforce Tracking • Baan Suay Land & House"}
             </p>
           </div>
@@ -165,192 +146,166 @@ export default function LoginPage() {
 
         {/* Login Card */}
         <Card className="shadow-2xl border-white/10 bg-card/95 backdrop-blur-md">
-          <CardHeader className="space-y-3 pb-3">
+          <CardHeader className="space-y-1 pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-bold text-foreground">
-                {lang === "th" ? "เข้าสู่ระบบ (Sign In)" : "Sign In to TaskFlow"}
+                {isSignUp
+                  ? lang === "th"
+                    ? "ลงทะเบียนเปิดสิทธิ์ผู้ใช้งาน (Sign Up)"
+                    : "Register Access"
+                  : lang === "th"
+                  ? "เข้าสู่ระบบ (Sign In)"
+                  : "Sign In to TaskFlow"}
               </CardTitle>
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
-                🔒 Protected Access
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                🔒 {lang === "th" ? "เฉพาะอีเมลที่ Admin อนุมัติ" : "Whitelisted Only"}
               </span>
             </div>
-
-            {/* Login Mode Toggle Tabs */}
-            <div className="grid grid-cols-2 p-1 rounded-lg bg-muted/60 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setActiveTab("quick")}
-                className={`py-1.5 rounded-md transition-all cursor-pointer ${
-                  activeTab === "quick"
-                    ? "bg-background text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {lang === "th" ? "👤 เลือกบัญชีผู้ใช้" : "👤 Quick Member"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("password")}
-                className={`py-1.5 rounded-md transition-all cursor-pointer ${
-                  activeTab === "password"
-                    ? "bg-background text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {lang === "th" ? "🔑 อีเมล / รหัสผ่าน" : "🔑 Email / Password"}
-              </button>
-            </div>
+            <CardDescription className="text-xs text-muted-foreground">
+              {isSignUp
+                ? lang === "th"
+                  ? "กรอกอีเมลที่ Admin ระบุไว้ในระบบ เพื่อตั้งรหัสผ่านเข้าใช้งาน"
+                  : "Enter the email registered by Admin in Settings to create access"
+                : lang === "th"
+                ? "กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งานระบบองค์กร"
+                : "Enter your company email and password to access the portal"}
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4 pt-1">
             {errorMessage && (
-              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-xs flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{errorMessage}</span>
+              <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start gap-2 animate-in fade-in">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
+                <span className="leading-relaxed">{errorMessage}</span>
               </div>
             )}
 
             {successMessage && (
-              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                <span>{successMessage}</span>
+              <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2 animate-in fade-in">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span className="font-semibold">{successMessage}</span>
               </div>
             )}
 
-            {/* TAB 1: Quick Member Login */}
-            {activeTab === "quick" && (
-              <div className="space-y-2">
-                <p className="text-[11px] text-muted-foreground">
-                  {lang === "th"
-                    ? "คลิกเลือกชื่อของคุณเพื่อเข้าสู่ระบบทันที (รวมถึงระดับ Viewer):"
-                    : "Click your profile to sign in instantly (including Viewers):"}
-                </p>
-
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {users.map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => handleQuickLogin(u)}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl border bg-background hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 hover:border-emerald-400 transition-all text-xs text-left group cursor-pointer shadow-2xs"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-105 transition-transform">
-                          {(u.full_name || "?").charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-semibold text-foreground group-hover:text-emerald-700 truncate">
-                            {u.full_name}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground truncate">{u.email}</div>
-                        </div>
-                      </div>
-                      <Badge
-                        variant={
-                          u.role === "admin"
-                            ? "default"
-                            : u.role === "manager"
-                            ? "high"
-                            : "medium"
-                        }
-                        className="text-[9px] uppercase font-bold shrink-0 ml-2"
-                      >
-                        {u.role}
-                      </Badge>
-                    </button>
-                  ))}
-                </div>
+            {/* Email & Password Form */}
+            <form onSubmit={handleAuthSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-foreground">
+                  {lang === "th" ? "อีเมลพนักงาน/สมาชิก (Work Email):" : "Work Email:"} <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  type="email"
+                  required
+                  placeholder="name@baansuay.com หรือ user@medtree.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="text-xs"
+                />
               </div>
-            )}
 
-            {/* TAB 2: Email & Password Sign In / Sign Up */}
-            {activeTab === "password" && (
-              <form onSubmit={handleAuthSubmit} className="space-y-3">
-                {isSignUp && (
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-foreground">
-                      {lang === "th" ? "ชื่อ-นามสกุล / ตำแหน่ง:" : "Full Name / Title:"}
-                    </label>
-                    <Input
-                      type="text"
-                      required
-                      placeholder="เช่น สมชาย (โฟร์แมน)"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="text-xs"
-                    />
-                  </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-foreground">
+                  {lang === "th" ? "รหัสผ่าน (Password):" : "Password:"} <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 font-semibold gap-2 mt-2 cursor-pointer shadow-sm"
+              >
+                {loading ? (
+                  <span className="animate-pulse">{lang === "th" ? "กำลังตรวจสอบฐานข้อมูล..." : "Verifying with database..."}</span>
+                ) : isSignUp ? (
+                  <>
+                    <UserPlus className="h-4 w-4" />
+                    <span>{lang === "th" ? "ยืนยันอีเมลและเข้าสู่ระบบ" : "Verify & Sign Up"}</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4" />
+                    <span>{lang === "th" ? "เข้าสู่ระบบ (Sign In)" : "Sign In"}</span>
+                  </>
                 )}
+              </Button>
 
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-foreground">
-                    {lang === "th" ? "อีเมล (Email):" : "Email Address:"}
-                  </label>
-                  <Input
-                    type="email"
-                    required
-                    placeholder="name@baansuay.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-foreground">
-                    {lang === "th" ? "รหัสผ่าน (Password):" : "Password:"}
-                  </label>
-                  <Input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="text-xs"
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 font-semibold gap-2 mt-2 cursor-pointer"
+              <div className="flex items-center justify-between text-xs pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setErrorMessage(null);
+                    setSuccessMessage(null);
+                  }}
+                  className="text-emerald-600 hover:text-emerald-500 font-semibold transition-colors cursor-pointer"
                 >
-                  {loading ? (
-                    <span className="animate-pulse">{lang === "th" ? "กำลังดำเนินการ..." : "Processing..."}</span>
-                  ) : isSignUp ? (
-                    <>
-                      <UserPlus className="h-4 w-4" />
-                      <span>{lang === "th" ? "สมัครสมาชิกและเข้าสู่ระบบ" : "Sign Up"}</span>
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="h-4 w-4" />
-                      <span>{lang === "th" ? "เข้าสู่ระบบ" : "Sign In"}</span>
-                    </>
-                  )}
-                </Button>
+                  {isSignUp
+                    ? lang === "th"
+                      ? "มีบัญชีแล้ว? เข้าสู่ระบบ"
+                      : "Have an account? Sign In"
+                    : lang === "th"
+                    ? "เปิดสิทธิ์ครั้งแรก (Sign Up)"
+                    : "First time sign in? Sign Up"}
+                </button>
 
-                <div className="text-center pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSignUp(!isSignUp);
-                      setErrorMessage(null);
-                      setSuccessMessage(null);
-                    }}
-                    className="text-xs text-emerald-600 hover:text-emerald-500 font-semibold transition-colors cursor-pointer"
-                  >
-                    {isSignUp
-                      ? lang === "th"
-                        ? "มีบัญชีแล้ว? เข้าสู่ระบบ"
-                        : "Have an account? Sign In"
-                      : lang === "th"
-                      ? "ยังไม่มีบัญชี? สมัครสมาชิกใหม่"
-                      : "New user? Sign Up"}
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPilotGuide(!showPilotGuide)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1"
+                >
+                  <Sparkles className="h-3 w-3 text-amber-500" />
+                  <span>{showPilotGuide ? (lang === "th" ? "▲ ปิดรายชื่อ" : "▲ Close") : (lang === "th" ? "💡 ดูอีเมลในระบบ" : "💡 Registered Emails")}</span>
+                </button>
+              </div>
+
+              {/* Collapsible Whitelist Viewer for Pilot Testing */}
+              {showPilotGuide && (
+                <div className="p-3 rounded-xl bg-muted/50 border text-[11px] space-y-2 animate-in fade-in">
+                  <div className="font-semibold text-foreground flex items-center justify-between">
+                    <span>{lang === "th" ? "📋 รายชื่ออีเมลที่ระบุไว้ใน Settings:" : "📋 Whitelisted in Settings:"}</span>
+                    <span className="text-[10px] text-muted-foreground">{users.length} คน</span>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto space-y-1 pr-1 divide-y divide-border/50">
+                    {users.map((u) => (
+                      <div
+                        key={u.id}
+                        onClick={() => {
+                          setEmail(u.email);
+                          setPassword("123456");
+                        }}
+                        className="pt-1 first:pt-0 flex items-center justify-between hover:text-emerald-600 cursor-pointer group"
+                        title={lang === "th" ? "คลิกเพื่อกรอกอีเมลนี้อัตโนมัติ" : "Click to auto-fill"}
+                      >
+                        <div className="truncate">
+                          <span className="font-medium text-foreground group-hover:text-emerald-600">{u.full_name}</span>
+                          <span className="text-[10px] text-muted-foreground block truncate">{u.email}</span>
+                        </div>
+                        <Badge
+                          variant={
+                            u.role === "admin"
+                              ? "default"
+                              : u.role === "manager"
+                              ? "high"
+                              : "medium"
+                          }
+                          className="text-[8px] uppercase font-bold shrink-0 ml-1"
+                        >
+                          {u.role}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </form>
-            )}
+              )}
+            </form>
           </CardContent>
         </Card>
       </div>

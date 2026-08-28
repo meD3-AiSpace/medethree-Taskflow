@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -289,6 +290,35 @@ export default function SettingsPage() {
       setIsSendingEmail(false);
     }
   };
+
+  const router = useRouter();
+
+  // Strict RBAC: Only Admin can access Settings
+  if (currentUser?.role !== "admin") {
+    return (
+      <div className="max-w-xl mx-auto py-16 text-center space-y-4 animate-in fade-in">
+        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 inline-block">
+          <ShieldAlert className="h-12 w-12 text-amber-600 mx-auto" />
+        </div>
+        <div className="space-y-1.5">
+          <h2 className="text-lg font-bold text-foreground">
+            {lang === "th" ? "สงวนสิทธิ์เฉพาะผู้ดูแลระบบ (Admin Access Only)" : "Admin Access Only"}
+          </h2>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+            {lang === "th"
+              ? `เมนูการตั้งค่าระบบ, การจัดการบุคลากร, การลบโครงการ และการตรวจสอบสถิติ สงวนสิทธิ์สำหรับผู้ดูแลระบบ (Admin) เท่านั้น บัญชีของคุณ (${currentUser?.full_name}) มีระดับสิทธิ์เป็น ${currentUser?.role?.toUpperCase()}`
+              : `System settings, user management, and audit telemetry are restricted to Administrator accounts. Your current role is ${currentUser?.role?.toUpperCase()}.`}
+          </p>
+        </div>
+        <Button
+          onClick={() => router.push("/dashboard")}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 cursor-pointer"
+        >
+          {lang === "th" ? "กลับสู่หน้าหลัก (Go to Dashboard)" : "Return to Dashboard"}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-6">

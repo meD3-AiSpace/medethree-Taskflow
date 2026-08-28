@@ -65,6 +65,8 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const unreadNotifsCount = notifications.filter((n) => !n.is_read).length;
   const permitTasksCount = tasks.filter((t) => t.category === "permit").length;
 
+  const isAdmin = currentUser?.role === "admin";
+
   const navItems = [
     {
       label: t("navDashboard"),
@@ -100,11 +102,15 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       href: "/teams",
       icon: Users,
     },
-    {
-      label: t("navSettings"),
-      href: "/settings",
-      icon: Settings,
-    },
+    ...(isAdmin
+      ? [
+          {
+            label: t("navSettings"),
+            href: "/settings",
+            icon: Settings,
+          },
+        ]
+      : []),
   ];
 
   return (
