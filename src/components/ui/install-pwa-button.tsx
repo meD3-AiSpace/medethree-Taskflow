@@ -12,6 +12,20 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
 
+// Global hook to capture beforeinstallprompt at the earliest lifecycle
+declare global {
+  interface Window {
+    deferredPwaPrompt?: BeforeInstallPromptEvent | null;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e: Event) => {
+    e.preventDefault();
+    window.deferredPwaPrompt = e as BeforeInstallPromptEvent;
+  });
+}
+
 export function InstallPWAButton({
   variant = "header",
   className = "",
@@ -20,7 +34,7 @@ export function InstallPWAButton({
   className?: string;
 }) {
   const { lang } = useLanguage();
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [promptReady, setPromptReady] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
@@ -35,23 +49,27 @@ export function InstallPWAButton({
       setIsInstalled(true);
     }
 
+    if (window.deferredPwaPrompt) {
+      setPromptReady(true);
+    }
+
     // Check iOS device
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
 
-    // Listen for PWA install prompt event (Android / Chrome / Edge)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      window.deferredPwaPrompt = e as BeforeInstallPromptEvent;
+      setPromptReady(true);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // Listen for app installed event
     const handleAppInstalled = () => {
       setIsInstalled(true);
-      setDeferredPrompt(null);
+      window.deferredPwaPrompt = null;
+      setPromptReady(false);
       setShowGuideModal(false);
     };
 
@@ -63,23 +81,26 @@ export function InstallPWAButton({
     };
   }, []);
 
+  // 1-Click Direct Native Install Trigger
   const handleInstallClick = async () => {
-    // 1. If native prompt is available (Chrome, Android, Edge)
-    if (deferredPrompt) {
+    const activePrompt = window.deferredPwaPrompt;
+
+    if (activePrompt) {
       try {
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
+        await activePrompt.prompt();
+        const choice = await activePrompt.userChoice;
         if (choice.outcome === "accepted") {
           setIsInstalled(true);
         }
-        setDeferredPrompt(null);
+        window.deferredPwaPrompt = null;
+        setPromptReady(false);
         return;
       } catch (err) {
-        console.warn("[PWA Install Error]:", err);
+        console.warn("[PWA Direct Install Prompt Error]:", err);
       }
     }
 
-    // 2. Otherwise (iOS Safari, Mac Safari, or Manual) -> Open Guidance Modal
+    // Fallback: If on iOS or browser without prompt, display quick guidance
     setShowGuideModal(true);
   };
 
@@ -112,10 +133,10 @@ export function InstallPWAButton({
         <button
           type="button"
           onClick={handleInstallClick}
-          title={lang === "th" ? "ติดตั้งแอป TaskFlow ลงบนอุปกรณ์ (Install App)" : "Install TaskFlow App"}
-          className={"flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-400/40 bg-gradient-to-r from-amber-500/10 via-amber-400/15 to-emerald-500/10 hover:from-amber-500/20 hover:to-emerald-500/20 text-foreground font-semibold text-xs shadow-2xs hover:shadow-xs transition-all active:scale-[0.97] cursor-pointer group " + className}
+          title={lang === "th" ? "คลิกเพื่อติดตั้งแอป TaskFlow ลงบนอุปกรณ์ทันที" : "Click to install TaskFlow App directly"}
+          className={"flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-400/50 bg-gradient-to-r from-amber-500/15 via-amber-400/20 to-emerald-500/15 hover:from-amber-500/30 hover:to-emerald-500/30 text-foreground font-bold text-xs shadow-2xs hover:shadow-xs transition-all active:scale-[0.97] cursor-pointer group " + className}
         >
-          <div className="relative h-4 w-4 shrink-0 drop-shadow-[0_0_4px_rgba(245,158,11,0.5)] group-hover:scale-110 transition-transform">
+          <div className="relative h-4 w-4 shrink-0 drop-shadow-[0_0_5px_rgba(245,158,11,0.6)] group-hover:scale-115 transition-transform">
             <Image
               src="/images/baansuay-shield-logo.png"
               alt="Baansuay Shield Logo"
@@ -125,7 +146,7 @@ export function InstallPWAButton({
               priority
             />
           </div>
-          <span className="hidden sm:inline bg-gradient-to-r from-amber-900 to-emerald-900 dark:from-amber-200 dark:to-emerald-300 bg-clip-text text-transparent">
+          <span className="hidden sm:inline bg-gradient-to-r from-amber-900 via-amber-800 to-emerald-900 dark:from-amber-100 dark:via-amber-200 dark:to-emerald-200 bg-clip-text text-transparent font-black">
             {lang === "th" ? "ติดตั้งแอป" : "Install App"}
           </span>
           <Download className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0 group-hover:translate-y-0.5 transition-transform" />
@@ -136,10 +157,10 @@ export function InstallPWAButton({
         <button
           type="button"
           onClick={handleInstallClick}
-          className={"w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-emerald-500/5 to-teal-500/10 hover:border-amber-500/60 hover:shadow-xs transition-all active:scale-[0.98] text-xs font-semibold cursor-pointer group " + className}
+          className={"w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-teal-500/15 hover:border-amber-500/70 hover:shadow-xs transition-all active:scale-[0.98] text-xs font-bold cursor-pointer group " + className}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="relative h-6 w-6 shrink-0 drop-shadow-[0_0_6px_rgba(245,158,11,0.6)] group-hover:scale-110 transition-transform">
+            <div className="relative h-6 w-6 shrink-0 drop-shadow-[0_0_6px_rgba(245,158,11,0.7)] group-hover:scale-115 transition-transform">
               <Image
                 src="/images/baansuay-shield-logo.png"
                 alt="Baansuay Shield Logo"
@@ -149,11 +170,11 @@ export function InstallPWAButton({
               />
             </div>
             <div className="text-left truncate">
-              <div className="text-foreground leading-tight">
-                {lang === "th" ? "ติดตั้งแอปลงเครื่อง" : "Install to Device"}
+              <div className="text-foreground leading-tight font-bold">
+                {lang === "th" ? "ติดตั้งแอปลงเครื่อง" : "Install App to Device"}
               </div>
               <div className="text-[10px] text-muted-foreground font-normal">
-                {lang === "th" ? "กดเข้าใช้งานได้ทันที" : "Fast 1-Click Launch"}
+                {lang === "th" ? "คลิกติดตั้งลงเครื่องทันที" : "Direct 1-Click Native Install"}
               </div>
             </div>
           </div>
@@ -161,7 +182,7 @@ export function InstallPWAButton({
         </button>
       )}
 
-      {/* Cross-Platform Installation Guide Modal */}
+      {/* Guidance Modal for iOS Safari (Where Apple requires Share Sheet) or Browsers without direct API */}
       {showGuideModal && (
         <Dialog open={showGuideModal} onOpenChange={setShowGuideModal}>
           <DialogContent className="max-w-md" onClose={() => setShowGuideModal(false)}>
