@@ -42,6 +42,11 @@ import {
   Activity,
   BarChart3,
   TrendingUp,
+  Download,
+  Upload,
+  Database,
+  Archive,
+  RefreshCw,
 } from "lucide-react";
 import { UserRole, UserProfile } from "@/lib/types/database.types";
 import { formatDateTime } from "@/lib/utils";
@@ -61,6 +66,7 @@ export default function SettingsPage() {
     users,
     teams,
     projects,
+    tasks,
     activityLogs,
     addUser,
     updateUser,
@@ -70,6 +76,9 @@ export default function SettingsPage() {
     deleteProject,
     updateLineUserId,
     updateNotificationPreferences,
+    isSyncing,
+    syncCloudData,
+    restoreBackupData,
   } = useTaskStore();
   const { t, lang } = useLanguage();
 
@@ -77,6 +86,88 @@ export default function SettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [pushResult, setPushResult] = useState<{ success: boolean; message: string; raw?: any } | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<{ success?: boolean; message?: string } | null>(null);
+
+  // 1-Click Export Complete System JSON Backup
+  const handleExportBackup = () => {
+    try {
+      const backupData = {
+        app: "Lighthouse TaskFlow",
+        version: "3.00",
+        org_id: currentUser?.org_id || "11111111-1111-1111-1111-111111111111",
+        exported_at: new Date().toISOString(),
+        exported_by: currentUser?.full_name || "Admin",
+        data: {
+          users,
+          teams,
+          projects,
+          tasks,
+          activityLogs,
+        },
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement("a");
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `medtree-taskflow-backup-${timestamp}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      setBackupStatus({
+        success: true,
+        message: lang === "th" ? "✅ ดาวน์โหลดไฟล์สำรองข้อมูล (JSON) สำเร็จเรียบร้อยแล้ว" : "✅ Complete JSON backup downloaded successfully.",
+      });
+    } catch (err: any) {
+      setBackupStatus({
+        success: false,
+        message: `Export Error: ${err.message}`,
+      });
+    }
+  };
+
+  // 1-Click Restore / Import System JSON Backup
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+
+        if (!parsed || (!parsed.data && !parsed.tasks && !parsed.users)) {
+          throw new Error(lang === "th" ? "รูปแบบไฟล์สำรองไม่ถูกต้อง" : "Invalid backup file structure");
+        }
+
+        const confirmMsg =
+          lang === "th"
+            ? "⚠️ คำเตือน: คุณต้องการกู้คืนข้อมูลระบบจากไฟล์สำรองนี้ใช่หรือไม่? ข้อมูลในเครื่องจะถูกแทนที่ด้วยข้อมูลจากไฟล์สำรอง"
+            : "⚠️ Confirm: Are you sure you want to restore workspace data from this backup file?";
+
+        if (window.confirm(confirmMsg)) {
+          const success = await restoreBackupData(parsed);
+          if (success) {
+            setBackupStatus({
+              success: true,
+              message: lang === "th" ? "✅ กู้คืนข้อมูลจากไฟล์สำรองสำเร็จสมบูรณ์" : "✅ Workspace successfully restored from backup file.",
+            });
+          } else {
+            throw new Error(lang === "th" ? "ไม่สามารถกู้คืนข้อมูลได้" : "Failed to apply backup data");
+          }
+        }
+      } catch (err: any) {
+        setBackupStatus({
+          success: false,
+          message: `Restore Error: ${err.message}`,
+        });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   // Compute user activity stats from activityLogs
   const { userStats, totalLogins, totalActions } = useMemo(() => {
@@ -1653,7 +1744,99 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 4. Organization Info Card */}
+      {/* 4. Disaster Recovery & Enterprise Backup Card */}
+      <Card className="border-emerald-200 dark:border-emerald-900/60 shadow-sm bg-gradient-to-br from-emerald-500/5 to-teal-500/5">
+        <CardHeader className="p-4 pb-3 border-b flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Database className="h-5 w-5 text-emerald-600" />
+            <div>
+              <CardTitle className="text-sm font-bold text-foreground">
+                {lang === "th" ? "ระบบสำรองและกู้คืนข้อมูลระดับองค์กร (Disaster Recovery & Backup)" : "Disaster Recovery & Workspace Backup"}
+              </CardTitle>
+              <p className="text-[11px] text-muted-foreground">
+                {lang === "th" ? "ส่งออกและนำเข้าข้อมูลโครงการ งาน สมาชิก และประวัติการทำงานแบบสมบูรณ์ 100%" : "Export and restore complete workspace snapshot (JSON)."}
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className="text-[10px] text-emerald-700 dark:text-emerald-300 border-emerald-500/40 bg-emerald-500/10">
+            <Archive className="h-3 w-3 mr-1" />
+            JSON Snapshot
+          </Badge>
+        </CardHeader>
+
+        <CardContent className="p-5 space-y-4 text-xs">
+          {backupStatus && (
+            <div
+              className={`p-3 rounded-lg border flex items-center gap-2 text-xs ${
+                backupStatus.success
+                  ? "bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+                  : "bg-rose-50/80 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300"
+              }`}
+            >
+              {backupStatus.success ? <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" /> : <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />}
+              <span>{backupStatus.message}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Export Section */}
+            <div className="p-4 rounded-xl border bg-card space-y-2.5">
+              <div className="flex items-center gap-2 font-bold text-foreground">
+                <Download className="h-4 w-4 text-emerald-600" />
+                <span>{lang === "th" ? "1. สำรองข้อมูลทั้งระบบ (Export All Data)" : "1. Export Full Workspace Backup"}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {lang === "th"
+                  ? "ดาวน์โหลดไฟล์สำรองข้อมูล JSON เก็บไว้ในคอมพิวเตอร์ส่วนตัว รวมข้อมูลงานทั้งหมด สมาชิก และประวัติการทำงาน"
+                  : "Download a full JSON snapshot of all tasks, projects, members, and audit logs to your local computer."}
+              </p>
+              <Button
+                onClick={handleExportBackup}
+                variant="emerald"
+                size="sm"
+                className="w-full text-xs font-semibold gap-1.5 cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>{lang === "th" ? "ดาวน์โหลดไฟล์สำรองข้อมูล (.json)" : "Download Full JSON Backup"}</span>
+              </Button>
+            </div>
+
+            {/* Import / Restore Section */}
+            <div className="p-4 rounded-xl border bg-card space-y-2.5">
+              <div className="flex items-center gap-2 font-bold text-foreground">
+                <Upload className="h-4 w-4 text-amber-600" />
+                <span>{lang === "th" ? "2. กู้คืนข้อมูลจากไฟล์สำรอง (Restore Backup)" : "2. Restore Workspace Backup"}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {lang === "th"
+                  ? "เลือกไฟล์สำรอง .json เพื่อกู้คืนข้อมูลระบบกลับสู่สภาพเดิมอย่างปลอดภัย"
+                  : "Upload a previously saved .json backup file to safely restore workspace state."}
+              </p>
+              <label className="block">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportBackup}
+                  className="hidden"
+                  id="backup-file-input"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById("backup-file-input")?.click()}
+                  className="w-full text-xs font-semibold gap-1.5 border-amber-500/50 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 cursor-pointer"
+                >
+                  <Upload className="h-3.5 w-3.5 text-amber-600" />
+                  <span>{lang === "th" ? "เลือกไฟล์เพื่อกู้คืน (.json)" : "Select File to Restore (.json)"}</span>
+                </Button>
+              </label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 5. Organization Info Card */}
       <Card className="shadow-sm">
         <CardHeader className="p-4 pb-3 border-b flex flex-row items-center gap-2">
           <Building className="h-4 w-4 text-emerald-600" />

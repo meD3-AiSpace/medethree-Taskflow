@@ -67,6 +67,11 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
   };
 
   const handleSwitchUser = (user: (typeof users)[0]) => {
+    if (currentUser?.role !== "admin") {
+      alert(lang === "th" ? "สงวนสิทธิ์การสลับโปรไฟล์สำหรับผู้ดูแลระบบ (Admin) เท่านั้น" : "Switch Profile is restricted to Admin only.");
+      setShowSwitchModal(false);
+      return;
+    }
     login(user);
     setShowSwitchModal(false);
     setShowUserMenu(false);
@@ -321,17 +326,19 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
                 </Badge>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowUserMenu(false);
-                  setShowSwitchModal(true);
-                }}
-                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-foreground font-medium transition-colors cursor-pointer text-left"
-              >
-                <UserCheck className="h-3.5 w-3.5 text-emerald-600" />
-                <span>{lang === "th" ? "🔄 สลับโปรไฟล์ผู้ใช้ (Switch Profile)" : "🔄 Switch User Profile"}</span>
-              </button>
+              {currentUser?.role === "admin" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    setShowSwitchModal(true);
+                  }}
+                  className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-foreground font-medium transition-colors cursor-pointer text-left"
+                >
+                  <UserCheck className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>{lang === "th" ? "🔄 สลับโปรไฟล์ผู้ใช้ (Admin Only)" : "🔄 Switch User Profile (Admin)"}</span>
+                </button>
+              )}
 
               {currentUser?.role === "admin" && (
                 <Link
@@ -359,8 +366,8 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
         </div>
       </div>
 
-      {/* Quick Switch User Modal Dialog */}
-      {showSwitchModal && (
+      {/* Quick Switch User Modal Dialog (Admin Only) */}
+      {showSwitchModal && currentUser?.role === "admin" && (
         <Dialog open={showSwitchModal} onOpenChange={setShowSwitchModal}>
           <DialogContent className="max-w-md" onClose={() => setShowSwitchModal(false)}>
             <DialogHeader>

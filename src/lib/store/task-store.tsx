@@ -392,9 +392,10 @@ interface TaskContextType {
   markAllNotificationsAsRead: () => void;
   updateLineUserId: (userId: string, lineUserId: string) => void;
   sendMockLinePush: (taskId: string, title: string, message: string) => Promise<{ success: boolean; error?: string }>;
-  // Cloud Sync
+  // Cloud Sync & Disaster Recovery
   isSyncing: boolean;
   syncCloudData: () => Promise<boolean>;
+  restoreBackupData: (backupJson: any) => Promise<boolean>;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -603,6 +604,18 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       return false;
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const restoreBackupData = async (backupJson: any): Promise<boolean> => {
+    try {
+      if (!backupJson || typeof backupJson !== "object") return false;
+      const data = backupJson.data || backupJson;
+      applyCloudData(data);
+      return true;
+    } catch (err) {
+      console.error("[Restore Backup Error]:", err);
+      return false;
     }
   };
 
@@ -1640,6 +1653,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         sendMockLinePush,
         isSyncing,
         syncCloudData,
+        restoreBackupData,
       }}
     >
       {children}
