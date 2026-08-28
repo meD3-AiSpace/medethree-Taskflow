@@ -127,7 +127,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       {/* Sidebar Container: Fixed on Mobile Drawer, Static on Desktop */}
       <aside
         className={cn(
-          "w-64 border-r bg-card h-screen flex flex-col shrink-0 z-40 transition-transform duration-300 ease-in-out",
+          "w-64 border-r bg-card h-screen flex flex-col shrink-0 z-40 transition-transform duration-300 ease-in-out print:hidden",
           "fixed md:static inset-y-0 left-0",
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         )}

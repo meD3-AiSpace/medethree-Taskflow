@@ -175,3 +175,69 @@
 .animate-lighthouse-flare {
   animation: lighthouseFlare 2.4s ease-in-out infinite;
 }
+
+/* ==================================================================== */
+/* Enterprise High-Fidelity A4 Print & PDF Stylesheet Rules             */
+/* ==================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 15mm 15mm;
+  }
+
+  html,
+  body,
+  #__next,
+  .h-screen,
+  .min-h-screen,
+  .overflow-hidden,
+  .overflow-y-auto {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  /* Hide navigation elements on print */
+  aside,
+  header,
+  nav,
+  button,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset main wrapper padding */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Enforce exact background colors and borders */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Avoid breaking inside table rows and cards */
+  tr,
+  .card,
+  .break-inside-avoid,
+  .rounded-xl {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Display printable headers cleanly */
+  .hidden.print\:block {
+    display: block !important;
+  }
+
+  .hidden.print\:flex {
+    display: flex !important;
+  }
+}

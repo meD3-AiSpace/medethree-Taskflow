@@ -84,7 +84,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 border-b bg-card/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-16 border-b bg-card/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 print:hidden">
       {/* Left: Mobile Hamburger + Brand Logo + Clean Profile Badge */}
       <div className="flex items-center gap-2.5">
         {/* Mobile Hamburger Button */}

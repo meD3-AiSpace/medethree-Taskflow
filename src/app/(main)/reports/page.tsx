@@ -479,14 +479,18 @@ export default function ExecutiveReportsPage() {
       </div>
 
       {/* Print Sign-off Footer (Shown only on Print) */}
-      <div className="hidden print:flex items-center justify-between pt-12 text-xs">
+      <div className="hidden print:flex items-center justify-between pt-12 text-xs break-inside-avoid">
         <div className="text-center space-y-8">
           <div>ลงชื่อ ............................................................</div>
-          <div>( ผู้จัดทำรายงาน / Project Manager )</div>
+          <div className="font-semibold text-slate-800">( ผู้จัดทำรายงาน / Project Manager )</div>
         </div>
         <div className="text-center space-y-8">
           <div>ลงชื่อ ............................................................</div>
-          <div>( ผู้บริหาร / Managing Director )</div>
+          <div className="font-semibold text-slate-800">( หัวหน้าวิศวกร / Lead Architect )</div>
+        </div>
+        <div className="text-center space-y-8">
+          <div>ลงชื่อ ............................................................</div>
+          <div className="font-semibold text-slate-800">( ผู้บริหารและที่ปรึกษา / Managing Director )</div>
         </div>
       </div>
     </div>
