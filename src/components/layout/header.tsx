@@ -108,9 +108,14 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
         )}
 
         {/* Mobile Brand Logo */}
-        <Link href="/dashboard" prefetch={false} className="md:hidden flex items-center">
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          title="คลิกเพื่อโหลดหน้าจอใหม่ (Reload / Refresh Page - F5)"
+          className="md:hidden flex items-center cursor-pointer bg-transparent border-0 p-0 hover:opacity-85 active:scale-95 transition-all select-none"
+        >
           <LighthouseLogo size="xs" showText={false} />
-        </Link>
+        </button>
 
         <div className="flex items-center gap-2">
           <Badge

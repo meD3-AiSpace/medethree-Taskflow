@@ -134,9 +134,14 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       >
         {/* Brand Header */}
         <div className="h-16 border-b flex items-center justify-between px-4 gap-2">
-          <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer group">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            title="คลิกเพื่อโหลดหน้าจอใหม่ (Reload / Refresh Page - F5)"
+            className="flex items-center gap-2 cursor-pointer group text-left bg-transparent border-0 p-0 hover:opacity-85 active:scale-95 transition-all select-none"
+          >
             <LighthouseLogo size="sm" showText={true} />
-          </Link>
+          </button>
 
           {/* Close button on mobile */}
           {onCloseMobile && (
