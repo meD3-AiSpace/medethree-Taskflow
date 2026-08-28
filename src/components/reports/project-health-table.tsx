@@ -109,11 +109,13 @@ export function ProjectHealthTable({
                       <span>{p.activeIssues}</span>
                     </span>
                   ) : (
-                    <span className="text-emerald-600 font-medium text-[11px]">✓ ปกติ</span>
+                    <span className="text-emerald-600 font-medium text-[11px]">
+                      {lang === "th" ? "✓ ปกติ" : "✓ Normal"}
+                    </span>
                   )}
                 </td>
                 <td className="py-3 px-4 text-right font-medium text-muted-foreground">
-                  {p.hours} ชม.
+                  {p.hours} {lang === "th" ? "ชม." : "hrs"}
                 </td>
               </tr>
             ))}

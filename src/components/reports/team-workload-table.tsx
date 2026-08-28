@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { UserProfile, Task, TimeEntry } from "@/lib/types/database.types";
 import { Language } from "@/lib/i18n/translations";
+import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Users, CheckCircle2, Clock } from "lucide-react";
 
@@ -87,7 +88,7 @@ export function TeamWorkloadTable({
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-semibold text-foreground">{m.name}</div>
+                      <div className="font-semibold text-foreground">{getLocalizedDynamicText(m.name, null, lang)}</div>
                       <div className="text-[10px] text-muted-foreground uppercase">{m.role}</div>
                     </div>
                   </div>
@@ -100,14 +101,14 @@ export function TeamWorkloadTable({
                         : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200"
                     }`}
                   >
-                    {m.activeCount} งาน
+                    {m.activeCount} {lang === "th" ? "งาน" : "tasks"}
                   </span>
                 </td>
                 <td className="py-3 px-4 text-center text-emerald-600 font-bold">
                   {m.completedCount}
                 </td>
                 <td className="py-3 px-4 text-right font-medium text-foreground">
-                  {m.hours} ชม.
+                  {m.hours} {lang === "th" ? "ชม." : "hrs"}
                 </td>
               </tr>
             ))}

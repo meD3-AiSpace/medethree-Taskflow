@@ -11,9 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { LighthouseLogo } from "@/components/ui/lighthouse-logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/utils";
+import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 
 interface HeaderProps {
   onOpenMobileMenu?: () => void;
@@ -119,7 +121,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
             {currentUser?.role?.toUpperCase() || "MEMBER"}
           </Badge>
           <span className="text-xs font-bold text-foreground hidden sm:inline truncate max-w-[220px]">
-            {currentUser?.full_name || "ผู้ใช้งาน"}
+            {getLocalizedDynamicText(currentUser?.full_name, null, lang) || (lang === "th" ? "ผู้ใช้งาน" : "User")}
           </span>
         </div>
       </div>
@@ -128,6 +130,9 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
       <div className="flex items-center gap-1.5 sm:gap-2.5">
         {/* Bilingual Flag Switcher: 🇹🇭 TH / 🇬🇧 EN */}
         <LanguageSwitcher />
+
+        {/* 3-Way Theme Switcher (System, Light, Dark) */}
+        <ThemeSwitcher />
 
         {/* Manual Cloud Sync Button */}
         <Button
@@ -289,7 +294,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
             </Avatar>
             <div className="hidden xl:block text-left">
               <div className="text-xs font-semibold leading-tight flex items-center gap-1">
-                <span>{currentUser?.full_name || "ผู้ใช้งาน"}</span>
+                <span>{getLocalizedDynamicText(currentUser?.full_name, null, lang) || (lang === "th" ? "ผู้ใช้งาน" : "User")}</span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </div>
               <div className="text-[10px] text-muted-foreground">{currentUser?.email || ""}</div>
@@ -300,7 +305,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
           {showUserMenu && (
             <div className="absolute right-0 mt-2 w-64 rounded-xl border bg-card p-2 shadow-xl z-50 text-xs animate-in fade-in space-y-1">
               <div className="p-2.5 rounded-lg bg-muted/40 space-y-1 border-b pb-2">
-                <div className="font-bold text-foreground">{currentUser?.full_name}</div>
+                <div className="font-bold text-foreground">{getLocalizedDynamicText(currentUser?.full_name, null, lang)}</div>
                 <div className="text-[10px] text-muted-foreground truncate">{currentUser?.email}</div>
                 <Badge
                   variant={
@@ -387,7 +392,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
                       </Avatar>
                       <div>
                         <div className="font-semibold text-xs flex items-center gap-1.5">
-                          <span>{u.full_name}</span>
+                          <span>{getLocalizedDynamicText(u.full_name, null, lang)}</span>
                           {isSelected && (
                             <span className="text-[9px] bg-emerald-600 text-white font-bold px-1.5 py-0.2 rounded">
                               {lang === "th" ? "ปัจจุบัน" : "Active"}

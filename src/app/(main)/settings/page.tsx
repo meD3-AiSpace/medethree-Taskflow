@@ -979,7 +979,7 @@ export default function SettingsPage() {
                       <td className="py-3 px-3 font-mono font-bold text-muted-foreground">{String(idx + 1).padStart(2, "0")}</td>
                       <td className="py-3 px-3">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
-                          <span>{u.full_name}</span>
+                          <span>{getLocalizedDynamicText(u.full_name, null, lang)}</span>
                           {isCurrent && (
                             <span className="text-[9px] bg-emerald-600 text-white font-bold px-1.5 py-0.2 rounded">
                               {lang === "th" ? "คุณ" : "You"}
@@ -1362,7 +1362,7 @@ export default function SettingsPage() {
                       <td className="py-3 px-3 font-mono font-bold text-muted-foreground">{String(idx + 1).padStart(2, "0")}</td>
                       <td className="py-3 px-3">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
-                          <span>{u.full_name}</span>
+                          <span>{getLocalizedDynamicText(u.full_name, null, lang)}</span>
                           {isCurrent && (
                             <span className="text-[9px] bg-emerald-600 text-white font-bold px-1.5 py-0.2 rounded">
                               {lang === "th" ? "คุณ" : "You"}

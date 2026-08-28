@@ -145,7 +145,9 @@ export function ExecutiveKPICards({
           </div>
         </div>
         <div>
-          <div className="text-2xl font-black text-foreground">{attachments.length} <span className="text-xs font-normal text-muted-foreground">ไฟล์</span></div>
+          <div className="text-2xl font-black text-foreground">
+            {attachments.length} <span className="text-xs font-normal text-muted-foreground">{lang === "th" ? "ไฟล์" : "files"}</span>
+          </div>
           <p className="text-[11px] text-violet-600 dark:text-violet-400 mt-0.5">
             {totalSavedPercent > 0 ? (lang === "th" ? `⚡ บีบอัดลดพื้นที่ ${totalSavedPercent}%` : `⚡ Saved ~${totalSavedPercent}% space`) : (lang === "th" ? "พร้อมส่งมอบ" : "Ready")}
           </p>

@@ -520,7 +520,7 @@ function TasksListContent() {
                             )}
                             {users.map((u) => (
                               <option key={u.id} value={u.id}>
-                                {u.full_name}
+                                {getLocalizedDynamicText(u.full_name, null, lang)}
                               </option>
                             ))}
                           </select>
@@ -528,7 +528,7 @@ function TasksListContent() {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {task.assignees && task.assignees.length > 0 ? (
                               task.assignees.map((a) => {
-                                const aName = a.full_name || "สมาชิก";
+                                const aName = getLocalizedDynamicText(a.full_name, null, lang) || (lang === "th" ? "สมาชิก" : "Member");
                                 return (
                                   <div key={a.id} className="flex items-center gap-1" title={aName}>
                                     <Avatar className="h-5 w-5">

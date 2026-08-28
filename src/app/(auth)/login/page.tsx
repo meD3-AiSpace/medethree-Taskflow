@@ -12,6 +12,7 @@ import { Sparkles, LogIn, UserPlus, AlertCircle, CheckCircle2 } from "lucide-rea
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { LighthouseLogo } from "@/components/ui/lighthouse-logo";
 import { createClient } from "@/lib/supabase/client";
+import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -285,7 +286,7 @@ export default function LoginPage() {
                         title={lang === "th" ? "คลิกเพื่อกรอกอีเมลนี้อัตโนมัติ" : "Click to auto-fill"}
                       >
                         <div className="truncate">
-                          <span className="font-medium text-foreground group-hover:text-emerald-600">{u.full_name}</span>
+                          <span className="font-medium text-foreground group-hover:text-emerald-600">{getLocalizedDynamicText(u.full_name, null, lang)}</span>
                           <span className="text-[10px] text-muted-foreground block truncate">{u.email}</span>
                         </div>
                         <Badge

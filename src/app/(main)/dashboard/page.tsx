@@ -323,7 +323,7 @@ export default function DashboardPage() {
                         {formatDate(task.deadline, lang)}
                       </span>
                       <span className="text-[9px] text-muted-foreground">
-                        {task.assignees?.[0]?.full_name || (lang === "th" ? "ไม่มีผู้รับผิดชอบ" : "Unassigned")}
+                        {getLocalizedDynamicText(task.assignees?.[0]?.full_name, null, lang) || (lang === "th" ? "ไม่มีผู้รับผิดชอบ" : "Unassigned")}
                       </span>
                     </div>
                   </Link>
@@ -410,7 +410,7 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="font-semibold text-xs text-foreground group-hover:text-emerald-600 transition-colors truncate">
-                      {user.full_name}
+                      {getLocalizedDynamicText(user.full_name, null, lang)}
                     </div>
                     <Badge variant={user.role === "manager" ? "high" : "default"} className="text-[9px] uppercase">
                       {user.role}

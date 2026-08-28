@@ -281,7 +281,7 @@ export default function TaskDetailPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-muted/30 border text-xs">
           <div>
             <span className="text-muted-foreground block text-[11px]">{t("assignor")}</span>
-            <strong className="text-foreground text-xs">{task.creator?.full_name || "-"}</strong>
+            <strong className="text-foreground text-xs">{getLocalizedDynamicText(task.creator?.full_name || "", null, lang) || "-"}</strong>
           </div>
           <div>
             <span className="text-muted-foreground block text-[11px] font-semibold">{t("assignee")}</span>
@@ -289,11 +289,11 @@ export default function TaskDetailPage() {
               <select
                 value={task.assignees?.[0]?.id || ""}
                 onChange={(e) => {
-                  const newUserId = e.target.value;
-                  const targetUser = users.find((u) => u.id === newUserId);
+                  const targetUser = users.find((u) => u.id === e.target.value);
                   if (targetUser) {
                     updateTaskDetails(task.id, { assignees: [targetUser] });
-                    setSuccessMessage(lang === "th" ? `เปลี่ยนผู้รับผิดชอบเป็น "${targetUser.full_name}" สำเร็จ` : `Assignee changed to "${targetUser.full_name}"`);
+                    const targetName = getLocalizedDynamicText(targetUser.full_name, null, lang);
+                    setSuccessMessage(lang === "th" ? `เปลี่ยนผู้รับผิดชอบเป็น "${targetName}" สำเร็จ` : `Assignee changed to "${targetName}"`);
                     setTimeout(() => setSuccessMessage(null), 3000);
                   }
                 }}
@@ -305,7 +305,7 @@ export default function TaskDetailPage() {
                 )}
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.full_name} ({u.role})
+                    {getLocalizedDynamicText(u.full_name, null, lang)} ({u.role})
                   </option>
                 ))}
               </select>
@@ -314,7 +314,7 @@ export default function TaskDetailPage() {
                 {task.assignees && task.assignees.length > 0 ? (
                   task.assignees.map((a) => (
                     <strong key={a.id} className="text-foreground text-xs">
-                      {a.full_name}
+                      {getLocalizedDynamicText(a.full_name, null, lang)}
                     </strong>
                   ))
                 ) : (
