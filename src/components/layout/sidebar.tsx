@@ -152,7 +152,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overscroll-contain touch-pan-y smooth-scroll">
           <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
             {t("navMenu")}
           </div>

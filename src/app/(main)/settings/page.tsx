@@ -954,7 +954,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="overflow-x-auto overscroll-x-contain touch-pan-x smooth-scroll rounded-lg border">
             <table className="w-full text-xs text-left">
               <thead className="bg-muted/40 text-muted-foreground border-b text-[11px] font-semibold">
                 <tr>
@@ -1339,7 +1339,7 @@ export default function SettingsPage() {
           </div>
 
           {/* User Telemetry Table */}
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="overflow-x-auto overscroll-x-contain touch-pan-x smooth-scroll rounded-lg border">
             <table className="w-full text-xs text-left">
               <thead className="bg-muted/40 text-muted-foreground border-b text-[11px] font-semibold">
                 <tr>
@@ -1487,7 +1487,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="overflow-x-auto overscroll-x-contain touch-pan-x smooth-scroll rounded-lg border">
             <table className="w-full text-xs text-left">
               <thead className="bg-muted/40 text-muted-foreground border-b text-[11px] font-semibold">
                 <tr>

@@ -379,7 +379,7 @@ function TasksListContent() {
 
       {/* Task Table */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overscroll-x-contain touch-pan-x smooth-scroll">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b bg-muted/40 font-semibold text-muted-foreground">

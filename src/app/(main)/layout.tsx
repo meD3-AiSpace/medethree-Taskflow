@@ -36,7 +36,7 @@ export default function MainLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
       {/* Responsive Sidebar (Static on Desktop, Drawer on Mobile) */}
       <Sidebar
         mobileOpen={mobileMenuOpen}
@@ -46,7 +46,7 @@ export default function MainLayout({
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header onOpenMobileMenu={() => setMobileMenuOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 bg-muted/20">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 bg-muted/20 overscroll-contain touch-pan-y smooth-scroll">
           <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">{children}</div>
         </main>
       </div>

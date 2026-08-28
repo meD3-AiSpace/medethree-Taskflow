@@ -63,7 +63,7 @@ export function TeamWorkloadTable({
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overscroll-x-contain touch-pan-x smooth-scroll">
         <table className="w-full text-xs text-left">
           <thead className="bg-muted/40 text-muted-foreground border-b text-[11px] font-semibold">
             <tr>

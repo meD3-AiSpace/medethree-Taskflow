@@ -345,7 +345,7 @@ export default function TaskDetailPage() {
 
         {/* Feature Tabs: Consolidated 3 Unified Workspace Tabs (Dimension 3 Lean) */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="flex items-center gap-1.5 w-full h-auto p-1 bg-muted/60 rounded-xl overflow-x-auto">
+          <TabsList className="flex items-center gap-1.5 w-full h-auto p-1 bg-muted/60 rounded-xl overflow-x-auto overscroll-x-contain touch-pan-x smooth-scroll">
             {/* Tab 1: Deliverables & Comments */}
             <TabsTrigger value="deliverables" className="text-xs gap-1.5 flex-1 py-2 font-medium">
               <Paperclip className="h-4 w-4 text-emerald-600" />
