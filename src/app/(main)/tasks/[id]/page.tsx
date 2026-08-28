@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTaskStore } from "@/lib/store/task-store";
@@ -57,6 +57,13 @@ export default function TaskDetailPage() {
   const [activeTab, setActiveTab] = useState<string>(tabParam === "support" ? "support" : "deliverables");
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [showAttachModal, setShowAttachModal] = useState(false);
+
+  // Automatically switch tab and highlight section if tab parameter is provided in URL
+  useEffect(() => {
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   const {
     tasks,

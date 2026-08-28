@@ -1351,6 +1351,23 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     // Persist issue to Supabase Cloud
     SupabaseSyncService.saveIssue(newIssue);
 
+    const targetTask = tasks.find((t) => t.id === taskId);
+
+    // Create In-App Notification for Blocker with exact task_id linking
+    const issueNotif: NotificationItem = {
+      id: `notif-${Date.now()}-blocker`,
+      user_id: currentUser.id,
+      task_id: taskId,
+      type: "issue_logged",
+      title: "🚨 มีปัญหาติดขัด (Active Blocker)",
+      title_en: "🚨 Active Blocker / Issue Reported",
+      message: `งาน "${targetTask?.title || "งานในระบบ"}": ${description}`,
+      message_en: `Task "${targetTask?.title || "Task"}": ${finalDescEn || description}`,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+    setNotifications((prev) => [issueNotif, ...prev]);
+
     // Dispatch LINE push to all Admins and Managers with line_user_id
     try {
       const targetExecLineIds = users
@@ -1358,7 +1375,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         .map((u) => u.line_user_id as string);
 
       if (targetExecLineIds.length > 0) {
-        const targetTask = tasks.find((t) => t.id === taskId);
         fetch("/api/line/notify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

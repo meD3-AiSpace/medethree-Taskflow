@@ -108,14 +108,24 @@ export default function NotificationsPage() {
                 </div>
 
                 <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0 mt-1">
-                  <span className="hidden sm:inline">{lang === "th" ? "เปิดดูงาน" : "View"}</span>
+                  <span className="hidden sm:inline">
+                    {notif.type === "issue_logged"
+                      ? (lang === "th" ? "🚨 ดูปัญหาติดขัด" : "View Blocker")
+                      : (lang === "th" ? "เปิดดูงาน" : "View Task")}
+                  </span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </div>
               </div>
             );
 
-            return notif.task_id ? (
-              <Link key={notif.id} href={`/tasks/${notif.task_id}`} className="block">
+            const targetHref = notif.task_id
+              ? notif.type === "issue_logged"
+                ? `/tasks/${notif.task_id}?tab=support`
+                : `/tasks/${notif.task_id}`
+              : null;
+
+            return targetHref ? (
+              <Link key={notif.id} href={targetHref} className="block">
                 {content}
               </Link>
             ) : (

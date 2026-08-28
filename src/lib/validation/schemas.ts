@@ -60,12 +60,18 @@ export const ReportsBriefingSchema = z.object({
   lang: LanguageEnum.optional().default("th"),
 });
 
-// Helper for formatting Zod validation errors
-export function formatZodError(error: any): string {
+// Helper for formatting Zod validation errors strictly
+export function formatZodError(error: unknown): string {
   if (!error) return "Invalid input";
-  const issues = error.issues || error.errors || [];
-  if (Array.isArray(issues) && issues.length > 0) {
-    return issues.map((e: any) => `${e.path && e.path.length > 0 ? e.path.join(".") + ": " : ""}${e.message}`).join(", ");
+  if (error instanceof z.ZodError) {
+    return error.issues.map((e) => `${e.path.length > 0 ? e.path.join(".") + ": " : ""}${e.message}`).join(", ");
   }
-  return error.message || "Validation failed";
+  if (typeof error === "object" && error !== null && "issues" in error && Array.isArray((error as { issues: unknown[] }).issues)) {
+    const issues = (error as { issues: Array<{ path?: string[]; message?: string }> }).issues;
+    return issues.map((e) => `${e.path && e.path.length > 0 ? e.path.join(".") + ": " : ""}${e.message || "Invalid"}`).join(", ");
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "Validation failed";
 }

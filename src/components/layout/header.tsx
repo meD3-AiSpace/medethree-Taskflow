@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Plus, Menu, RefreshCw, LogOut, UserCheck, ChevronDown, Sparkles } from "lucide-react";
+import { Bell, Plus, Menu, RefreshCw, LogOut, UserCheck, ChevronDown, Sparkles, ShieldAlert, CheckCheck, ArrowRight } from "lucide-react";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { LighthouseLogo } from "@/components/ui/lighthouse-logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatDateTime } from "@/lib/utils";
 
 interface HeaderProps {
   onOpenMobileMenu?: () => void;
@@ -20,20 +21,35 @@ interface HeaderProps {
 
 export function Header({ onOpenMobileMenu }: HeaderProps) {
   const router = useRouter();
-  const { currentUser, users, login, logout, notifications, isSyncing, syncCloudData } = useTaskStore();
+  const {
+    currentUser,
+    users,
+    login,
+    logout,
+    notifications,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    isSyncing,
+    syncCloudData,
+  } = useTaskStore();
   const { t, lang } = useLanguage();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [showNotifMenu, setShowNotifMenu] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -49,6 +65,19 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
     login(user);
     setShowSwitchModal(false);
     setShowUserMenu(false);
+  };
+
+  const handleNotificationClick = (notif: (typeof notifications)[0]) => {
+    markNotificationAsRead(notif.id);
+    setShowNotifMenu(false);
+    if (notif.task_id) {
+      const targetUrl = notif.type === "issue_logged"
+        ? `/tasks/${notif.task_id}?tab=support`
+        : `/tasks/${notif.task_id}`;
+      router.push(targetUrl);
+    } else {
+      router.push("/notifications");
+    }
   };
 
   return (
@@ -122,12 +151,18 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
           <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin text-emerald-600" : ""}`} />
         </Button>
 
-        {/* Notifications Direct Link Button */}
-        <Link href="/notifications" prefetch={false} title={lang === "th" ? "การแจ้งเตือนทั้งหมด" : "All Notifications"}>
+        {/* Interactive Notifications Bell & Dropdown */}
+        <div className="relative" ref={notifRef}>
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 sm:h-9 sm:w-9 relative hover:bg-emerald-50 hover:border-emerald-400 dark:hover:bg-emerald-950 transition-all cursor-pointer"
+            onClick={() => setShowNotifMenu(!showNotifMenu)}
+            title={lang === "th" ? "การแจ้งเตือน" : "Notifications"}
+            className={`h-8 w-8 sm:h-9 sm:w-9 relative transition-all cursor-pointer ${
+              showNotifMenu
+                ? "bg-emerald-50 border-emerald-500 text-emerald-600 dark:bg-emerald-950"
+                : "hover:bg-emerald-50 hover:border-emerald-400 dark:hover:bg-emerald-950"
+            }`}
           >
             <Bell className="h-4 w-4 text-foreground" />
             {unreadCount > 0 && (
@@ -136,7 +171,97 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
               </span>
             )}
           </Button>
-        </Link>
+
+          {/* Notification Dropdown Box */}
+          {showNotifMenu && (
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border bg-card p-3 shadow-2xl z-50 text-xs animate-in fade-in space-y-2">
+              <div className="flex items-center justify-between border-b pb-2">
+                <div className="font-bold text-foreground flex items-center gap-1.5">
+                  <Bell className="h-4 w-4 text-emerald-600" />
+                  <span>{lang === "th" ? "การแจ้งเตือนล่าสุด" : "Recent Notifications"}</span>
+                  {unreadCount > 0 && (
+                    <Badge variant="high" className="text-[9px] px-1.5 py-0">
+                      {unreadCount} {lang === "th" ? "ใหม่" : "new"}
+                    </Badge>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => markAllNotificationsAsRead()}
+                    className="text-[10px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <CheckCheck className="h-3 w-3" />
+                    <span>{lang === "th" ? "อ่านทั้งหมด" : "Mark all read"}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Notification List */}
+              <div className="max-h-72 overflow-y-auto space-y-1.5 pr-0.5 divide-y divide-border/40">
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground text-xs">
+                    {lang === "th" ? "ไม่มีการแจ้งเตือนใหม่" : "No new notifications"}
+                  </div>
+                ) : (
+                  notifications.slice(0, 5).map((n) => {
+                    const isIssue = n.type === "issue_logged";
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => handleNotificationClick(n)}
+                        className={`pt-1.5 first:pt-0 p-2 rounded-lg transition-all cursor-pointer text-left hover:bg-muted/60 ${
+                          !n.is_read
+                            ? "bg-emerald-50/40 dark:bg-emerald-950/20 border-l-2 border-emerald-600"
+                            : "opacity-80"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className="mt-0.5 shrink-0">
+                            {isIssue ? (
+                              <ShieldAlert className="h-4 w-4 text-rose-600 animate-pulse" />
+                            ) : (
+                              <Bell className="h-3.5 w-3.5 text-emerald-600" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-foreground text-xs flex items-center justify-between gap-1">
+                              <span className="truncate">{n.title}</span>
+                              <span className="text-[9px] font-mono text-muted-foreground shrink-0">
+                                {formatDateTime(n.created_at)}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
+                              {n.message}
+                            </p>
+                            {n.task_id && (
+                              <span className="text-[10px] text-emerald-600 font-semibold inline-flex items-center gap-0.5 mt-1">
+                                <span>{isIssue ? (lang === "th" ? "🚨 เปิดดูปัญหาติดขัด" : "View Blocker") : (lang === "th" ? "เปิดดูงาน" : "View Task")}</span>
+                                <ArrowRight className="h-2.5 w-2.5" />
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* View All Footer */}
+              <div className="border-t pt-2 text-center">
+                <Link
+                  href="/notifications"
+                  onClick={() => setShowNotifMenu(false)}
+                  className="text-xs text-emerald-600 hover:text-emerald-700 font-bold inline-flex items-center gap-1 hover:underline cursor-pointer"
+                >
+                  <span>{lang === "th" ? "ดูการแจ้งเตือนทั้งหมด (View All)" : "View All Notifications"}</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Create Task Button */}
         <Button
