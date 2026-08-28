@@ -138,8 +138,8 @@ export function LighthouseLogo({
             >
               Lighthouse
             </span>
-            <span className="text-[10px] bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 font-bold px-1.5 py-0.5 rounded shadow-2xs border border-amber-300/50">
-              v2.1
+            <span className="text-[10px] bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded shadow-2xs border border-emerald-300/50">
+              v3.0
             </span>
           </div>
 
