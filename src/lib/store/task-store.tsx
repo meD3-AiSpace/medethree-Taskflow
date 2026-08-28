@@ -608,6 +608,10 @@ const initialTimeEntries: TimeEntry[] = [
 interface TaskContextType {
   currentUser: UserProfile;
   setCurrentUser: (user: UserProfile) => void;
+  isAuthInitialized: boolean;
+  login: (user: UserProfile) => void;
+  logout: () => void;
+  logUserActivity: (action: string, details?: string) => void;
   tasks: Task[];
   issues: TaskIssue[];
   activityLogs: ActivityLog[];
@@ -668,6 +672,7 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserProfile>(defaultUsers[0]);
+  const [isAuthInitialized, setIsAuthInitialized] = useState<boolean>(false);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [issues, setIssues] = useState<TaskIssue[]>(initialIssues);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(initialActivityLogs);
@@ -680,6 +685,59 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(defaultProjects);
 
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      const savedUserStr = localStorage.getItem("taskflow_current_user");
+      if (savedUserStr) {
+        if (savedUserStr.startsWith("{")) {
+          const parsed = JSON.parse(savedUserStr);
+          if (parsed && parsed.id) setCurrentUser(parsed);
+        } else {
+          const found = defaultUsers.find((u) => u.id === savedUserStr);
+          if (found) setCurrentUser(found);
+        }
+      }
+    } catch {}
+    setIsAuthInitialized(true);
+  }, []);
+
+  const logUserActivity = (action: string, details?: string, targetUser?: UserProfile) => {
+    const userToLog = targetUser || currentUser;
+    if (!userToLog) return;
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      task_id: "global",
+      user_id: userToLog.id,
+      action: action,
+      new_value: details || action,
+      created_at: new Date().toISOString(),
+      user: userToLog,
+    };
+    setActivityLogs((prev) => [newLog, ...prev]);
+    try {
+      const existingLogs = JSON.parse(localStorage.getItem("taskflow_logs") || "[]");
+      localStorage.setItem("taskflow_logs", JSON.stringify([newLog, ...existingLogs.slice(0, 100)]));
+    } catch {}
+  };
+
+  const login = (user: UserProfile) => {
+    setCurrentUser(user);
+    try {
+      localStorage.setItem("taskflow_current_user", JSON.stringify(user));
+    } catch {}
+    logUserActivity("user_login", `เข้าสู่ระบบ (${user.role.toUpperCase()})`, user);
+  };
+
+  const logout = () => {
+    if (currentUser) {
+      logUserActivity("user_logout", "ออกจากระบบ");
+    }
+    try {
+      localStorage.removeItem("taskflow_current_user");
+    } catch {}
+    setCurrentUser(null as any);
+  };
 
   const applyCloudData = (cloudData: any) => {
     if (!cloudData) return;
@@ -1736,9 +1794,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         setCurrentUser: (u) => {
           setCurrentUser(u);
           try {
-            localStorage.setItem("taskflow_current_user", u.id);
+            localStorage.setItem("taskflow_current_user", JSON.stringify(u));
           } catch {}
         },
+        isAuthInitialized,
+        login,
+        logout,
+        logUserActivity,
         tasks,
         issues,
         activityLogs,

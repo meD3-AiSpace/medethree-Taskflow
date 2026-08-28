@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -38,8 +38,12 @@ import {
   Users,
   UserPlus,
   UserCheck,
+  Activity,
+  BarChart3,
+  TrendingUp,
 } from "lucide-react";
 import { UserRole, UserProfile } from "@/lib/types/database.types";
+import { formatDateTime } from "@/lib/utils";
 import { translateText } from "@/lib/i18n/auto-translate";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 import { cn } from "@/lib/utils";
@@ -56,6 +60,7 @@ export default function SettingsPage() {
     users,
     teams,
     projects,
+    activityLogs,
     addUser,
     updateUser,
     deleteUser,
@@ -71,6 +76,41 @@ export default function SettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [pushResult, setPushResult] = useState<{ success: boolean; message: string; raw?: any } | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  // Compute user activity stats from activityLogs
+  const { userStats, totalLogins, totalActions } = useMemo(() => {
+    const statsMap: Record<
+      string,
+      { loginCount: number; actionCount: number; lastActive: string | null; lastAction: string }
+    > = {};
+
+    users.forEach((u) => {
+      statsMap[u.id] = { loginCount: 0, actionCount: 0, lastActive: null, lastAction: "-" };
+    });
+
+    let logins = 0;
+    let actions = 0;
+
+    (activityLogs || []).forEach((log) => {
+      actions += 1;
+      const uId = log.user_id;
+      if (!uId) return;
+      if (!statsMap[uId]) {
+        statsMap[uId] = { loginCount: 0, actionCount: 0, lastActive: null, lastAction: "-" };
+      }
+      statsMap[uId].actionCount += 1;
+      if (log.action === "user_login") {
+        logins += 1;
+        statsMap[uId].loginCount += 1;
+      }
+      if (!statsMap[uId].lastActive || new Date(log.created_at) > new Date(statsMap[uId].lastActive!)) {
+        statsMap[uId].lastActive = log.created_at;
+        statsMap[uId].lastAction = log.new_value || log.action;
+      }
+    });
+
+    return { userStats: statsMap, totalLogins: logins, totalActions: actions };
+  }, [users, activityLogs]);
 
   // User Management in Settings State
   const [showUserModal, setShowUserModal] = useState(false);
@@ -1210,7 +1250,174 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 4. Projects Management Card (🏗️ จัดการโครงการก่อสร้างและบ้านจัดสรร) */}
+      {/* 4. User Access & Activity Analytics Card (📊 บันทึกสถิติการเข้าใช้งาน & พฤติกรรมบุคลากร) */}
+      <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm">
+        <CardHeader className="p-4 pb-3 border-b flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-emerald-600" />
+            <div>
+              <CardTitle className="text-sm font-bold text-foreground">
+                {lang === "th"
+                  ? "สถิติการเข้าใช้งาน & พฤติกรรมบุคลากร (User Access & Activity Analytics)"
+                  : "User Access & Activity Analytics"}
+              </CardTitle>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {lang === "th"
+                  ? "เก็บสถิติความถี่การเข้าสู่ระบบ กิจกรรมที่ทำ และเวลาใช้งานล่าสุดของสมาชิกทุกคน (รวมถึง Viewer) เพื่อการพัฒนาแอป"
+                  : "Track login frequency, performed actions, and last active timestamps for product development telemetry"}
+              </p>
+            </div>
+          </div>
+          <Badge variant="default" className="text-[10px] font-mono gap-1">
+            <Activity className="h-3 w-3 animate-pulse" />
+            <span>{totalLogins} Logins</span>
+          </Badge>
+        </CardHeader>
+
+        <CardContent className="p-4 space-y-4">
+          {/* Top 3 Metric Summary Boxes */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-muted/40 border space-y-1">
+              <span className="text-muted-foreground text-[11px] block">
+                {lang === "th" ? "👥 ผู้ใช้งานในระบบทั้งหมด" : "Total Registered Users"}
+              </span>
+              <div className="text-xl font-bold text-foreground flex items-center gap-1.5">
+                <span>{users.length}</span>
+                <span className="text-xs font-normal text-muted-foreground">{lang === "th" ? "คน" : "users"}</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-1">
+              <span className="text-emerald-700 dark:text-emerald-300 text-[11px] block font-medium">
+                {lang === "th" ? "🔑 ยอดการเข้าสู่ระบบสะสม" : "Total User Logins"}
+              </span>
+              <div className="text-xl font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                <span>{totalLogins}</span>
+                <span className="text-xs font-normal text-emerald-600/70">{lang === "th" ? "ครั้ง" : "times"}</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 space-y-1">
+              <span className="text-blue-700 dark:text-blue-300 text-[11px] block font-medium">
+                {lang === "th" ? "⚡ กิจกรรมทั้งหมดในระบบ" : "Total Performed Actions"}
+              </span>
+              <div className="text-xl font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                <span>{totalActions}</span>
+                <span className="text-xs font-normal text-blue-600/70">{lang === "th" ? "รายการ" : "events"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* User Telemetry Table */}
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-muted/40 text-muted-foreground border-b text-[11px] font-semibold">
+                <tr>
+                  <th className="py-2.5 px-3">#</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "ชื่อ-นามสกุล" : "Member Name"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "สิทธิ์ (Role)" : "Role"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "เข้าใช้งาน (Logins)" : "Logins"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "กิจกรรม (Actions)" : "Actions"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "ใช้งานล่าสุดเมื่อ" : "Last Active"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "กิจกรรมล่าสุด" : "Last Activity"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {users.map((u, idx) => {
+                  const stat = userStats[u.id] || { loginCount: 0, actionCount: 0, lastActive: null, lastAction: "-" };
+                  const isCurrent = currentUser?.id === u.id;
+
+                  return (
+                    <tr key={u.id} className={`hover:bg-muted/30 transition-colors ${isCurrent ? "bg-emerald-50/30 dark:bg-emerald-950/20" : ""}`}>
+                      <td className="py-3 px-3 font-mono font-bold text-muted-foreground">{String(idx + 1).padStart(2, "0")}</td>
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-foreground flex items-center gap-1.5">
+                          <span>{u.full_name}</span>
+                          {isCurrent && (
+                            <span className="text-[9px] bg-emerald-600 text-white font-bold px-1.5 py-0.2 rounded">
+                              {lang === "th" ? "คุณ" : "You"}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <Badge
+                          variant={
+                            u.role === "admin"
+                              ? "default"
+                              : u.role === "manager"
+                              ? "high"
+                              : "medium"
+                          }
+                          className="text-[10px] uppercase font-bold"
+                        >
+                          {u.role}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                          {stat.loginCount} {lang === "th" ? "ครั้ง" : "times"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="font-mono text-muted-foreground">
+                          {stat.actionCount} {lang === "th" ? "ครั้ง" : "acts"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-[11px] text-muted-foreground">
+                        {stat.lastActive ? (
+                          <span className="flex items-center gap-1 font-mono">
+                            <Clock className="h-3 w-3 text-muted-foreground/70" />
+                            <span>{formatDateTime(stat.lastActive)}</span>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-[11px] text-foreground truncate max-w-[180px]">
+                        {stat.lastAction}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Recent Audit Stream Feed */}
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-foreground flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-emerald-600" />
+                <span>{lang === "th" ? "ประวัติการใช้งานล่าสุด (Recent Activity Stream):" : "Recent Activity Stream:"}</span>
+              </span>
+              <span className="text-[11px] text-muted-foreground">{lang === "th" ? "แสดง 5 รายการล่าสุด" : "Latest 5 records"}</span>
+            </div>
+
+            <div className="space-y-1.5">
+              {(activityLogs || []).slice(0, 5).map((log) => {
+                const logUser = users.find((u) => u.id === log.user_id) || log.user;
+                return (
+                  <div
+                    key={log.id}
+                    className="p-2 rounded-lg bg-muted/40 text-xs flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="font-bold text-foreground shrink-0">{logUser?.full_name || "ผู้ใช้"}:</span>
+                      <span className="text-muted-foreground truncate">{log.new_value || log.action}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
+                      {formatDateTime(log.created_at)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 5. Projects Management Card (🏗️ จัดการโครงการก่อสร้างและบ้านจัดสรร) */}
       <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm">
         <CardHeader className="p-4 pb-3 border-b flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
