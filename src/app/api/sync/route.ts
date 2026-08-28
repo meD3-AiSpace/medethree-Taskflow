@@ -192,6 +192,7 @@ export async function POST(request: NextRequest) {
           email: user.email,
           role: user.role || "member",
           team_id: user.team_id || null,
+          phone_number: user.phone_number || null,
           line_user_id: user.line_user_id || null,
           created_at: user.created_at || new Date().toISOString(),
         };

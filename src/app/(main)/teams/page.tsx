@@ -55,9 +55,11 @@ export default function TeamsPage() {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [role, setRole] = useState<UserRole>("member");
   const [teamId, setTeamId] = useState(safeTeams[0]?.id || "");
   const [lineUserId, setLineUserId] = useState("");
+  const [showLineHelp, setShowLineHelp] = useState(false);
 
   // Team Modal State
   const [showTeamModal, setShowTeamModal] = useState(false);
@@ -77,10 +79,12 @@ export default function TeamsPage() {
   const handleOpenCreateUser = (defaultTeamId?: string) => {
     setEditingUserId(null);
     setFullName("");
-    setEmail(`user${Date.now().toString().slice(-4)}@medtree.com`);
+    setEmail(`user${Date.now().toString().slice(-4)}@baansuay.com`);
+    setPhoneNumber("");
     setRole("member");
     setTeamId(defaultTeamId || safeTeams[0]?.id || "");
     setLineUserId("");
+    setShowLineHelp(false);
     setShowUserModal(true);
   };
 
@@ -90,9 +94,11 @@ export default function TeamsPage() {
     setEditingUserId(user.id);
     setFullName(user.full_name || "");
     setEmail(user.email || "");
+    setPhoneNumber(user.phone_number || "");
     setRole(user.role || "member");
     setTeamId(user.team_id || safeTeams[0]?.id || "");
     setLineUserId(user.line_user_id || "");
+    setShowLineHelp(false);
     setShowUserModal(true);
   };
 
@@ -105,6 +111,7 @@ export default function TeamsPage() {
       updateUser(editingUserId, {
         full_name: fullName.trim(),
         email: email.trim(),
+        phone_number: phoneNumber.trim() || null,
         role,
         team_id: teamId || safeTeams[0]?.id,
         line_user_id: lineUserId.trim() || null,
@@ -114,6 +121,7 @@ export default function TeamsPage() {
       addUser({
         full_name: fullName.trim(),
         email: email.trim(),
+        phone_number: phoneNumber.trim() || undefined,
         role,
         team_id: teamId || safeTeams[0]?.id,
         line_user_id: lineUserId.trim() || undefined,
@@ -428,15 +436,29 @@ export default function TeamsPage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5 truncate">
-                                <span className="flex items-center gap-1 truncate max-w-[140px]">
+                              <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span className="flex items-center gap-1 truncate max-w-[130px]" title={member.email}>
                                   <Mail className="h-2.5 w-2.5 shrink-0" />
                                   {member.email || "no-email"}
                                 </span>
-                                {member.line_user_id && (
-                                  <span className="text-emerald-600 font-semibold flex items-center gap-0.5 shrink-0 text-[9px]">
+                                {member.phone_number && (
+                                  <a
+                                    href={`tel:${member.phone_number}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-0.5 text-blue-600 dark:text-blue-400 hover:underline font-medium shrink-0"
+                                    title={lang === "th" ? `โทรออกหา ${memberName}` : `Call ${memberName}`}
+                                  >
                                     <Smartphone className="h-2.5 w-2.5" />
-                                    LINE
+                                    {member.phone_number}
+                                  </a>
+                                )}
+                                {member.line_user_id ? (
+                                  <span className="text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-1.5 py-0.2 rounded font-bold flex items-center gap-0.5 shrink-0 text-[9px]">
+                                    💬 LINE Active
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground/60 text-[9px] flex items-center gap-0.5">
+                                    ⚪ ไม่ได้ผูก LINE
                                   </span>
                                 )}
                               </div>
@@ -562,19 +584,37 @@ export default function TeamsPage() {
                 </p>
               </div>
 
-              {/* Email */}
-              <div>
-                <label className="block font-semibold mb-1 text-foreground">
-                  {lang === "th" ? "อีเมล (Email):" : "Email Address:"} <span className="text-rose-500">*</span>
-                </label>
-                <Input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@medtree.com"
-                  className="text-xs"
-                />
+              {/* Contact Information (Email & Phone) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Email */}
+                <div>
+                  <label className="block font-semibold mb-1 text-foreground">
+                    {lang === "th" ? "อีเมล (Email):" : "Email Address:"} <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@baansuay.com"
+                    className="text-xs"
+                  />
+                </div>
+
+                {/* Phone Number */}
+                <div>
+                  <label className="block font-semibold mb-1 text-foreground flex items-center justify-between">
+                    <span>{lang === "th" ? "เบอร์โทรศัพท์:" : "Phone Number:"}</span>
+                    <span className="text-[10px] text-muted-foreground">{lang === "th" ? "มีก็ใส่" : "Optional"}</span>
+                  </label>
+                  <Input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="เช่น 081-234-5678"
+                    className="text-xs"
+                  />
+                </div>
               </div>
 
               {/* Team */}
@@ -595,18 +635,52 @@ export default function TeamsPage() {
                 </Select>
               </div>
 
-              {/* LINE User ID (Optional) */}
-              <div>
-                <label className="block font-semibold mb-1 text-foreground flex items-center justify-between">
-                  <span>{lang === "th" ? "LINE User ID สำหรับรับแจ้งเตือน (ขึ้นต้นด้วย U...):" : "LINE User ID (Optional):"}</span>
-                  <span className="text-[10px] text-muted-foreground">{lang === "th" ? "ไม่บังคับ" : "Optional"}</span>
-                </label>
+              {/* LINE User ID (For Direct 1-on-1 Multi-Push) */}
+              <div className="p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Smartphone className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>{lang === "th" ? "LINE User ID สำหรับรับแจ้งเตือนส่วนตัว:" : "LINE User ID (Direct Push):"}</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowLineHelp(!showLineHelp)}
+                    className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold hover:underline cursor-pointer"
+                  >
+                    {showLineHelp ? (lang === "th" ? "▲ ปิดคำแนะนำ" : "▲ Close Guide") : (lang === "th" ? "💡 วิธีดู Line ID คลิก" : "💡 How to get Line ID")}
+                  </button>
+                </div>
+
                 <Input
                   value={lineUserId}
                   onChange={(e) => setLineUserId(e.target.value)}
-                  placeholder="e.g. U8a9b7c6d5e4f3a2b1c0d9e8f7a6b5c4d"
-                  className="text-xs font-mono"
+                  placeholder="e.g. U8a9b7c6d5e4f3a2b1c0d9e8f7a6b5c4d (ขึ้นต้นด้วยตัว U)"
+                  className="text-xs font-mono bg-background"
                 />
+
+                {showLineHelp && (
+                  <div className="p-2.5 rounded bg-white dark:bg-slate-900 border text-[11px] text-muted-foreground space-y-1.5 animate-in fade-in">
+                    <p className="font-semibold text-foreground">
+                      {lang === "th" ? "📱 ขั้นตอนการรับรหัส Line User ID (ทำครั้งเดียว):" : "📱 How to get your Line User ID:"}
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 text-[10px]">
+                      <li>
+                        {lang === "th" ? "เพิ่มเพื่อน LINE OA ของระบบที่ LINE ID: " : "Add LINE OA: "}
+                        <strong className="text-emerald-600 font-mono">@739cutlg</strong> (Faraday-ARCH)
+                      </li>
+                      <li>
+                        {lang === "th" ? "พิมพ์ข้อความคำว่า " : "Send a message with "}
+                        <strong className="text-emerald-600">ID</strong>
+                        {lang === "th" ? " หรือ " : " or "}
+                        <strong className="text-emerald-600">สวัสดี</strong>
+                        {lang === "th" ? " ส่งเข้าไปในแชท" : " in chat"}
+                      </li>
+                      <li>
+                        {lang === "th" ? "บอทจะตอบกลับรหัส User ID (เช่น U8a9b...) คัดลอกมากรอกในช่องนี้ได้ทันที" : "Copy the returned User ID and paste here."}
+                      </li>
+                    </ol>
+                  </div>
+                )}
               </div>
 
               <DialogFooter>

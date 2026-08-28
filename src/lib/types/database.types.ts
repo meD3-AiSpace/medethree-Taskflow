@@ -56,6 +56,7 @@ export interface UserProfile {
   id: string;
   org_id: string;
   line_user_id?: string | null;
+  phone_number?: string | null;
   full_name: string;
   email: string;
   role: UserRole;

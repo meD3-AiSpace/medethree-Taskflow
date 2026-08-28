@@ -619,7 +619,7 @@ interface TaskContextType {
   users: UserProfile[];
   projects: Project[];
   // User Management Actions
-  addUser: (userData: { full_name: string; email: string; role: UserRole; team_id?: string; line_user_id?: string }) => UserProfile;
+  addUser: (userData: { full_name: string; email: string; role: UserRole; team_id?: string; line_user_id?: string; phone_number?: string }) => UserProfile;
   updateUser: (userId: string, updates: Partial<UserProfile>) => void;
   deleteUser: (userId: string) => { success: boolean; message?: string };
   // Team Management Actions
@@ -762,6 +762,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
           email: cu.email || defaultMatch?.email || "user@medtree.com",
           role: (cu.role || defaultMatch?.role || "member") as UserRole,
           team_id: cu.team_id || defaultMatch?.team_id || "team-consult",
+          phone_number: cu.phone_number || defaultMatch?.phone_number || undefined,
           line_user_id: cu.line_user_id || defaultMatch?.line_user_id || undefined,
           created_at: cu.created_at || new Date().toISOString(),
         };
@@ -887,6 +888,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     role: UserRole;
     team_id?: string;
     line_user_id?: string;
+    phone_number?: string;
   }): UserProfile => {
     const newUser: UserProfile = {
       id: `u-${Date.now()}`,
@@ -895,6 +897,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       email: userData.email,
       role: userData.role,
       team_id: userData.team_id || teams[0]?.id || "team-design",
+      phone_number: userData.phone_number || null,
       line_user_id: userData.line_user_id || null,
       created_at: new Date().toISOString(),
     };
@@ -1289,6 +1292,31 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     // Persist issue to Supabase Cloud
     SupabaseSyncService.saveIssue(newIssue);
+
+    // Dispatch LINE push to all Admins and Managers with line_user_id
+    try {
+      const targetExecLineIds = users
+        .filter((u) => (u.role === "admin" || u.role === "manager") && u.line_user_id)
+        .map((u) => u.line_user_id as string);
+
+      if (targetExecLineIds.length > 0) {
+        const targetTask = tasks.find((t) => t.id === taskId);
+        fetch("/api/line/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipientLineUserIds: targetExecLineIds,
+            title: "🚨 ปัญหาวิกฤต (Active Blocker) หน้างาน",
+            message: description,
+            taskTitle: targetTask?.title || "งานในระบบ",
+            taskId,
+            priority: "urgent",
+            senderName: currentUser.full_name,
+            projectName: targetTask?.project?.name || "โครงการ",
+          }),
+        }).catch((err) => console.error("[LINE Multi-Push Blocker Error]:", err));
+      }
+    } catch {}
 
     return newIssue;
   };

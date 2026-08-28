@@ -28,18 +28,54 @@ export async function POST(req: NextRequest) {
 
     const body = JSON.parse(raw);
     const events = body.events || [];
+    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
     for (const event of events) {
       const lineUserId = event.source?.userId;
+      const replyToken = event.replyToken;
       console.log(`[LINE Webhook Event] Type: ${event.type} | UserID: ${lineUserId}`);
 
-      if (event.type === "follow") {
-        console.log(`[LINE OA] New user followed LINE OA: ${lineUserId}`);
+      if (event.type === "follow" && replyToken && token) {
+        // Welcome message with User ID
+        await fetch("https://api.line.me/v2/bot/message/reply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            replyToken,
+            messages: [
+              {
+                type: "text",
+                text: `🏰 ยินดีต้อนรับสู่ระบบ Lighthouse TaskFlow!\n\n🔑 รหัส LINE User ID ประจำตัวของคุณคือ:\n${lineUserId}\n\n(นำรหัสนี้ไปบันทึกในหน้าทีมงานเพื่อรับแจ้งเตือนงานและปัญหาด่วนได้ทันทีครับ)`,
+              },
+            ],
+          }),
+        }).catch((err) => console.error("[LINE Reply Error]:", err));
       }
 
-      if (event.type === "message" && event.message?.type === "text") {
+      if (event.type === "message" && event.message?.type === "text" && replyToken && token) {
         const text = event.message.text.trim();
         console.log(`[LINE Message] From ${lineUserId}: "${text}"`);
+
+        // Always reply with User ID if requested or on greeting
+        await fetch("https://api.line.me/v2/bot/message/reply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            replyToken,
+            messages: [
+              {
+                type: "text",
+                text: `🔑 รหัส LINE User ID ของคุณคือ:\n${lineUserId}\n\n📌 คัดลอกรหัสนี้ไปใส่ในช่อง "LINE User ID" ในระบบ TaskFlow เพื่อรับการแจ้งเตือนงานของฝ่ายงานคุณได้ทันทีครับ ✨`,
+              },
+            ],
+          }),
+        }).catch((err) => console.error("[LINE Reply Error]:", err));
       }
     }
 
