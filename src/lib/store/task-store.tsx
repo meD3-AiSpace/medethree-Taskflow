@@ -760,7 +760,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const applyCloudData = (cloudData: any) => {
     if (!cloudData) return;
-    if (cloudData.tasks && cloudData.tasks.length > 0) {
+
+    if (cloudData.tasks && Array.isArray(cloudData.tasks)) {
       const mappedTasks: Task[] = cloudData.tasks.map((dbTask: any) => {
         const project = cloudData.projects?.find((p: any) => p.id === dbTask.project_id) || defaultProjects[0];
         const creator = cloudData.users?.find((u: any) => u.id === dbTask.created_by) || defaultUsers[0];
@@ -768,8 +769,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         const taskComments = (cloudData.comments || []).filter((c: any) => c.task_id === dbTask.id);
         const taskIssues = (cloudData.issues || []).filter((i: any) => i.task_id === dbTask.id && !i.is_resolved);
 
-        // Preserve existing task assignees and attachments so they are never lost on sync
-        const existingTask = tasks.find((t) => t.id === dbTask.id) || initialTasks.find((t) => t.id === dbTask.id);
+        const existingTask = tasks.find((t) => t.id === dbTask.id);
         const taskAssignees = (existingTask?.assignees && existingTask.assignees.length > 0)
           ? existingTask.assignees
           : (creator ? [creator] : []);
@@ -787,120 +787,67 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         };
       });
 
-      // Merge initial sample tasks (including task-2 with MEP clash blocker) so sample tasks are always intact
-      initialTasks.forEach((it) => {
-        if (!mappedTasks.some((mt) => mt.id === it.id)) {
-          mappedTasks.push(it);
-        }
-      });
-
-      setTasks(mappedTasks);
+      // Only if tasks exist in cloud, update tasks state
+      if (mappedTasks.length > 0) {
+        setTasks(mappedTasks);
+      }
     }
 
     if (cloudData.teams && cloudData.teams.length > 0) {
-      const mergedTeams: Team[] = cloudData.teams.map((ct: any) => {
-        const defaultMatch = defaultTeams.find((dt) => dt.id === ct.id);
-        return {
-          id: ct.id,
-          org_id: ct.org_id || defaultOrg.id,
-          name: ct.name || defaultMatch?.name || "ฝ่ายงาน",
-          name_en: ct.name_en || defaultMatch?.name_en || ct.name || "Department",
-          description: ct.description || defaultMatch?.description || "",
-          created_at: ct.created_at || new Date().toISOString(),
-        };
-      });
-      defaultTeams.forEach((dt) => {
-        if (!mergedTeams.some((mt) => mt.id === dt.id)) {
-          mergedTeams.push(dt);
-        }
-      });
+      const mergedTeams: Team[] = cloudData.teams.map((ct: any) => ({
+        id: ct.id,
+        org_id: ct.org_id || defaultOrg.id,
+        name: ct.name || "ฝ่ายงาน",
+        name_en: ct.name_en || ct.name || "Department",
+        description: ct.description || "",
+        created_at: ct.created_at || new Date().toISOString(),
+      }));
       setTeams(mergedTeams);
-    } else {
-      setTeams(defaultTeams);
     }
 
-    if (cloudData.projects && cloudData.projects.length > 0) {
-      const mergedProjects: Project[] = cloudData.projects.map((cp: any) => {
-        const defaultMatch = defaultProjects.find((dp) => dp.id === cp.id);
-        return {
+    if (cloudData.projects && Array.isArray(cloudData.projects)) {
+      if (cloudData.projects.length > 0) {
+        const mergedProjects: Project[] = cloudData.projects.map((cp: any) => ({
           id: cp.id,
           org_id: cp.org_id || defaultOrg.id,
-          name: cp.name || defaultMatch?.name || "โครงการ",
-          name_en: cp.name_en || defaultMatch?.name_en || cp.name || "Project",
-          team_id: cp.team_id || defaultMatch?.team_id || "team-design",
+          name: cp.name || "โครงการ",
+          name_en: cp.name_en || cp.name || "Project",
+          team_id: cp.team_id || "team-design",
           created_at: cp.created_at || new Date().toISOString(),
-        };
-      });
-      setProjects(mergedProjects);
-      try { localStorage.setItem("taskflow_projects", JSON.stringify(mergedProjects)); } catch {}
-    } else if (cloudData.projects && cloudData.projects.length === 0) {
-      setProjects(defaultProjects);
+        }));
+        setProjects(mergedProjects);
+        try { localStorage.setItem("taskflow_projects", JSON.stringify(mergedProjects)); } catch {}
+      }
     }
 
-    if (cloudData.users && cloudData.users.length > 0) {
-      const mergedUsers: UserProfile[] = cloudData.users.map((cu: any) => {
-        const defaultMatch = defaultUsers.find((du) => du.id === cu.id);
-        return {
-          id: cu.id,
-          org_id: cu.org_id || defaultOrg.id,
-          full_name: cu.full_name || defaultMatch?.full_name || "ผู้ใช้งาน",
-          email: cu.email || defaultMatch?.email || "user@medtree.com",
-          role: (cu.role || defaultMatch?.role || "member") as UserRole,
-          team_id: cu.team_id || defaultMatch?.team_id || "team-consult",
-          phone_number: cu.phone_number || defaultMatch?.phone_number || undefined,
-          line_user_id: cu.line_user_id || defaultMatch?.line_user_id || undefined,
-          created_at: cu.created_at || new Date().toISOString(),
-        };
-      });
-      defaultUsers.forEach((du) => {
-        if (!mergedUsers.some((mu) => mu.id === du.id)) {
-          mergedUsers.push(du);
-        }
-      });
+    if (cloudData.users && Array.isArray(cloudData.users) && cloudData.users.length > 0) {
+      const mergedUsers: UserProfile[] = cloudData.users.map((cu: any) => ({
+        id: cu.id,
+        org_id: cu.org_id || defaultOrg.id,
+        full_name: cu.full_name || "ผู้ใช้งาน",
+        email: cu.email || "user@medtree.com",
+        role: (cu.role || "member") as UserRole,
+        team_id: cu.team_id || "team-consult",
+        phone_number: cu.phone_number || undefined,
+        line_user_id: cu.line_user_id || undefined,
+        created_at: cu.created_at || new Date().toISOString(),
+      }));
       setUsers(mergedUsers);
       saveUsersState(mergedUsers);
 
-      // Auto-update current active user if changed in cloud
       const currentMatch = mergedUsers.find((u) => u.id === currentUser.id);
       if (currentMatch) {
         setCurrentUser(currentMatch);
       }
-    } else {
-      setUsers(defaultUsers);
     }
 
     if (cloudData.comments && cloudData.comments.length > 0) setComments(cloudData.comments);
     if (cloudData.attachments && cloudData.attachments.length > 0) setAttachments(cloudData.attachments);
-    // Robust Issue State Sync: preserve local resolution status and resolver details
-    let localIssues: TaskIssue[] = [];
-    try {
-      const saved = localStorage.getItem("taskflow_issues");
-      if (saved) localIssues = JSON.parse(saved);
-    } catch {}
 
-    const issueMap = new Map<string, TaskIssue>();
-    // 1. Initial issues fallback
-    initialIssues.forEach((i) => issueMap.set(i.id, i));
-    // 2. Override with local issues (which contain resolved status & resolver info)
-    localIssues.forEach((i) => issueMap.set(i.id, i));
-    // 3. Override with cloud issues if provided
-    if (cloudData.issues && cloudData.issues.length > 0) {
-      cloudData.issues.forEach((ci: any) => {
-        const existing = issueMap.get(ci.id);
-        issueMap.set(ci.id, {
-          ...existing,
-          ...ci,
-          // Preserve resolved details if marked locally
-          is_resolved: ci.is_resolved ?? existing?.is_resolved ?? false,
-          resolved_by: ci.resolved_by ?? existing?.resolved_by,
-          resolved_at: ci.resolved_at ?? existing?.resolved_at,
-          resolution_description: ci.resolution_description ?? existing?.resolution_description,
-          resolved_user: ci.resolved_user ?? existing?.resolved_user,
-        });
-      });
+    // Robust Issue State Sync
+    if (cloudData.issues && Array.isArray(cloudData.issues) && cloudData.issues.length > 0) {
+      setIssues(cloudData.issues);
     }
-    const finalIssues = Array.from(issueMap.values());
-    setIssues(finalIssues);
     if (cloudData.timeEntries && cloudData.timeEntries.length > 0) setTimeEntries(cloudData.timeEntries);
     if (cloudData.activityLogs && cloudData.activityLogs.length > 0) setActivityLogs(cloudData.activityLogs);
   };
