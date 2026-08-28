@@ -1476,11 +1476,16 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     );
     setIssues(updatedIssues);
 
-    const updatedTasks = tasks.map((t) =>
-      t.id === issue.task_id
-        ? { ...t, unresolved_issues_count: Math.max(0, (t.unresolved_issues_count || 1) - 1) }
-        : t
-    );
+    const updatedTasks = tasks.map((t) => {
+      const isTarget = t.id === issue.task_id || (t.id === "task-2" && (issue.task_id === "task-2" || issue.task_id === "t2222222-1111-1111-1111-111111111111"));
+      if (isTarget) {
+        const remainingUnresolved = updatedIssues.filter(
+          (i) => (i.task_id === t.id || (t.id === "task-2" && (i.task_id === "task-2" || i.task_id === "t2222222-1111-1111-1111-111111111111"))) && !i.is_resolved
+        ).length;
+        return { ...t, unresolved_issues_count: remainingUnresolved };
+      }
+      return t;
+    });
     setTasks(updatedTasks);
 
     const newLog: ActivityLog = {

@@ -66,6 +66,7 @@ export default function TaskDetailPage() {
 
   const {
     tasks,
+    issues,
     comments,
     attachments,
     timeEntries,
@@ -99,6 +100,7 @@ export default function TaskDetailPage() {
   const resolvedTaskId = task?.id || taskId;
   const taskComments = comments.filter((c) => c.task_id === resolvedTaskId || c.task_id === taskId);
   const taskAttachments = attachments.filter((a) => a.task_id === resolvedTaskId || a.task_id === taskId);
+  const taskIssues = issues.filter((i) => i.task_id === resolvedTaskId || i.task_id === taskId || (resolvedTaskId === "task-2" && (i.task_id === "task-2" || i.task_id === "t2222222-1111-1111-1111-111111111111")));
   const taskTimeEntries = timeEntries.filter((e) => e.task_id === resolvedTaskId || e.task_id === taskId);
   const totalMinutes = taskTimeEntries.reduce((acc, l) => acc + (l.duration_minutes || 0), 0);
   const totalHours = (totalMinutes / 60).toFixed(1);
@@ -344,9 +346,9 @@ export default function TaskDetailPage() {
             <TabsTrigger value="support" className="text-xs gap-1.5 flex-1 py-2 font-medium">
               <ShieldAlert className="h-4 w-4 text-rose-500" />
               <span>{lang === "th" ? "🚨 ปัญหา & ติดขัด (Issues & Blockers)" : "Issues & Blockers"}</span>
-              {(task.unresolved_issues_count || 0) > 0 && (
+              {taskIssues.filter((i) => !i.is_resolved).length > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
-                  {task.unresolved_issues_count}
+                  {taskIssues.filter((i) => !i.is_resolved).length}
                 </span>
               )}
             </TabsTrigger>

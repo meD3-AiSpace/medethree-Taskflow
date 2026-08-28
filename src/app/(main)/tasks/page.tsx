@@ -37,6 +37,7 @@ import {
 } from "@/lib/utils";
 import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { QuickLogIssueModal } from "@/components/tasks/quick-issue-modal";
+import { QuickResolveModal } from "@/components/tasks/quick-resolve-modal";
 import { QuickAttachModal } from "@/components/tasks/quick-attach-modal";
 import { ViewModeSwitcher } from "@/components/tasks/view-mode-switcher";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
@@ -48,6 +49,7 @@ function TasksListContent() {
   const { t, lang } = useLanguage();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [issueModalTask, setIssueModalTask] = useState<any>(null);
+  const [resolveModalTask, setResolveModalTask] = useState<any>(null);
   const [attachModalTask, setAttachModalTask] = useState<any>(null);
 
   // URL Query Parameters
@@ -126,9 +128,10 @@ function TasksListContent() {
       const isOverdue = t.deadline && new Date(t.deadline).getTime() < now && t.status !== "completed";
       if (!isOverdue) return false;
     } else if (selectedSpecialFilter === "issues") {
-      const hasOpenIssues = (t.unresolved_issues_count && t.unresolved_issues_count > 0) ||
-                            issues.some((i) => i.task_id === t.id && !i.is_resolved);
-      if (!hasOpenIssues) return false;
+      const activeUnresolvedIssues = issues.filter(
+        (i) => (i.task_id === t.id || (t.id === "task-2" && (i.task_id === "task-2" || i.task_id === "t2222222-1111-1111-1111-111111111111"))) && !i.is_resolved
+      );
+      if (activeUnresolvedIssues.length === 0) return false;
     } else if (selectedSpecialFilter === "at_risk") {
       const isAtRisk =
         t.deadline &&
@@ -402,7 +405,13 @@ function TasksListContent() {
                     task.deadline &&
                     new Date(task.deadline).getTime() < Date.now() &&
                     task.status !== "completed";
-                  const openIssues = task.unresolved_issues_count || 0;
+                  const taskIssues = issues.filter(
+                    (i) => i.task_id === task.id || (task.id === "task-2" && (i.task_id === "task-2" || i.task_id === "t2222222-1111-1111-1111-111111111111"))
+                  );
+                  const activeUnresolvedIssues = taskIssues.filter((i) => !i.is_resolved);
+                  const resolvedIssues = taskIssues.filter((i) => i.is_resolved);
+                  const openIssues = activeUnresolvedIssues.length;
+                  const lastResolved = resolvedIssues.length > 0 ? resolvedIssues[resolvedIssues.length - 1] : null;
 
                   const displayTitle = getLocalizedDynamicText(task.title, task.title_en, lang);
                   const rawProjectName = task.project?.name || "-";
@@ -432,9 +441,17 @@ function TasksListContent() {
                               </span>
                             )}
                             {openIssues > 0 && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
-                                <AlertTriangle className="h-3 w-3" />
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-200 text-[10px] font-bold animate-pulse">
+                                <AlertTriangle className="h-3 w-3 text-rose-600" />
                                 {lang === "th" ? `ติดปัญหา ${openIssues} รายการ` : `${openIssues} blockers`}
+                              </span>
+                            )}
+                            {openIssues === 0 && lastResolved && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-semibold">
+                                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                {lang === "th"
+                                  ? `แก้ปัญหาแล้ว (โดย: ${lastResolved.resolved_user?.full_name || "ทีมงาน"})`
+                                  : `Resolved by ${lastResolved.resolved_user?.full_name || "Team"}`}
                               </span>
                             )}
                             {task.permit_details && task.permit_details.revision_round > 0 && (
@@ -450,7 +467,7 @@ function TasksListContent() {
                       {/* Project & Category */}
                       <td className="py-3 px-4">
                         <div className="font-medium text-foreground">{displayProject}</div>
-                        <div className="text-[10px] text-muted-foreground">
+                        <div className="text-[11px] text-muted-foreground">
                           {getCategoryLabel(task.category, lang)}
                         </div>
                       </td>
@@ -458,14 +475,14 @@ function TasksListContent() {
                       {/* Status */}
                       <td className="py-3 px-4">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                             task.status === "completed"
                               ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                              : task.status === "review"
-                              ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
                               : task.status === "in_progress"
-                              ? "bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200"
-                              : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                              : task.status === "review"
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                              : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {getStatusLabel(task.status, lang)}
@@ -475,7 +492,7 @@ function TasksListContent() {
                       {/* Priority */}
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded-full border text-[10px] font-semibold ${getPriorityBadgeColor(
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getPriorityBadgeColor(
                             task.priority
                           )}`}
                         >
@@ -483,19 +500,17 @@ function TasksListContent() {
                         </span>
                       </td>
 
-                      {/* Assignee */}
+                      {/* Assignees */}
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {task.assignees && task.assignees.length > 0 ? (
                             task.assignees.map((a) => {
-                              if (!a) return null;
                               const aName = a.full_name || "สมาชิก";
-                              const aInit = aName.trim().charAt(0).toUpperCase() || "?";
                               return (
-                                <div key={a.id || Math.random().toString()} className="flex items-center gap-1">
+                                <div key={a.id} className="flex items-center gap-1" title={aName}>
                                   <Avatar className="h-5 w-5">
-                                    <AvatarFallback className="text-[9px]">
-                                      {aInit}
+                                    <AvatarFallback className="text-[9px] bg-emerald-100 text-emerald-800 font-bold">
+                                      {aName.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <span className="truncate max-w-[100px] text-[11px]">
@@ -526,7 +541,6 @@ function TasksListContent() {
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {/* Quick Attach File Button */}
                           <Button
                             type="button"
                             variant="outline"
@@ -542,23 +556,40 @@ function TasksListContent() {
                             <span>{lang === "th" ? "แนบไฟล์" : "Attach"}</span>
                           </Button>
 
-                          {/* Quick Log Blocker Button */}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIssueModalTask(task);
-                            }}
-                            className="text-[11px] h-7 px-2 border-rose-400/60 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 gap-1 font-semibold cursor-pointer"
-                            title={lang === "th" ? "บันทึกปัญหาที่พบ / จุดติดขัด" : "Log blocker issue"}
-                          >
-                            <ShieldAlert className="h-3 w-3 text-rose-600" />
-                            <span>{lang === "th" ? "+ บันทึกปัญหา" : "+ Issue"}</span>
-                          </Button>
+                          {/* Quick Resolve Blocker Button (if has active issue) */}
+                          {openIssues > 0 ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setResolveModalTask(task);
+                              }}
+                              className="text-[11px] h-7 px-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 gap-1 font-bold cursor-pointer shadow-xs"
+                              title={lang === "th" ? "บันทึกการแก้ไขปัญหาติดขัด" : "Resolve active blocker"}
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>{lang === "th" ? "✅ แก้ปัญหาแล้ว" : "Resolve"}</span>
+                            </Button>
+                          ) : (
+                            /* Quick Log Blocker Button (if no active issue) */
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIssueModalTask(task);
+                              }}
+                              className="text-[11px] h-7 px-2 border-rose-400/60 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 gap-1 font-semibold cursor-pointer"
+                              title={lang === "th" ? "บันทึกปัญหาที่พบ / จุดติดขัด" : "Log blocker issue"}
+                            >
+                              <ShieldAlert className="h-3 w-3 text-rose-600" />
+                              <span>{lang === "th" ? "+ บันทึกปัญหา" : "+ Issue"}</span>
+                            </Button>
+                          )}
 
-                          {/* View Details Button */}
                           <Button
                             type="button"
                             variant="outline"
@@ -597,6 +628,17 @@ function TasksListContent() {
           open={Boolean(issueModalTask)}
           onOpenChange={(open) => {
             if (!open) setIssueModalTask(null);
+          }}
+        />
+      )}
+
+      {/* Quick Resolve Blocker Modal */}
+      {resolveModalTask && (
+        <QuickResolveModal
+          task={resolveModalTask}
+          open={Boolean(resolveModalTask)}
+          onOpenChange={(open) => {
+            if (!open) setResolveModalTask(null);
           }}
         />
       )}
