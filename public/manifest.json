@@ -1,7 +1,7 @@
 {
-  "name": "Lighthouse TaskFlow — Baansuay & MeDTree",
-  "short_name": "TaskFlow",
-  "description": "ระบบติดตามงานและสถาปัตยกรรม Baansuay Land & House / MeDTree Design & Build",
+  "name": "Lighthouse TaskFlow",
+  "short_name": "Lighthouse TaskFlow",
+  "description": "ระบบติดตามงานและบริหารบุคลากรสถาปัตยกรรม Lighthouse TaskFlow — ประภาคารนำทางความสำเร็จ",
   "start_url": "/",
   "display": "standalone",
   "orientation": "any",

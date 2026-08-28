@@ -6,8 +6,8 @@ import { ThemeProvider } from "@/lib/theme/theme-context";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 
 export const metadata: Metadata = {
-  title: "Lighthouse — ประภาคารนำทางความสำเร็จในการบริหารงาน",
-  description: "ระบบติดตามงานและบริหารบุคลากร Lighthouse TaskFlow — Baansuay Land & House / MeDTree",
+  title: "Lighthouse TaskFlow — ประภาคารนำทางความสำเร็จ",
+  description: "ระบบติดตามงานและบริหารบุคลากรสถาปัตยกรรม Lighthouse TaskFlow — Baansuay & MeDTree",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.png",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "TaskFlow",
+    title: "Lighthouse TaskFlow",
   },
 };
 
