@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { InstallPWAButton } from "@/components/ui/install-pwa-button";
 import { LighthouseLogo } from "@/components/ui/lighthouse-logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/utils";
@@ -138,6 +139,9 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
 
       {/* Right Actions */}
       <div className="flex items-center gap-1.5 sm:gap-2.5">
+        {/* PWA Install App Button with Baansuay Shield Logo */}
+        <InstallPWAButton variant="header" />
+
         {/* Bilingual Flag Switcher: 🇹🇭 TH / 🇬🇧 EN */}
         <LanguageSwitcher />
 

@@ -6,11 +6,17 @@ import { ThemeProvider } from "@/lib/theme/theme-context";
 
 export const metadata: Metadata = {
   title: "Lighthouse — ประภาคารนำทางความสำเร็จในการบริหารงาน",
-  description: "ระบบติดตามงานและบริหารบุคลากร Lighthouse TaskFlow — ประภาคารที่นำแสงไฟสู่เรือที่กำลังหลงทางกลางพายุที่มืดมิด",
+  description: "ระบบติดตามงานและบริหารบุคลากร Lighthouse TaskFlow — Baansuay Land & House / MeDTree",
+  manifest: "/manifest.json",
   icons: {
     icon: "/favicon.png",
-    shortcut: "/favicon.ico",
-    apple: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "TaskFlow",
   },
 };
 

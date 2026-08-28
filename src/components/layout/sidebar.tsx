@@ -23,6 +23,7 @@ import { useTaskStore } from "@/lib/store/task-store";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { Button } from "@/components/ui/button";
 import { LighthouseLogo } from "@/components/ui/lighthouse-logo";
+import { InstallPWAButton } from "@/components/ui/install-pwa-button";
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -222,6 +223,11 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
             </div>
           </Link>
         )}
+
+        {/* PWA Install App Button in Sidebar */}
+        <div className="px-3 pb-2">
+          <InstallPWAButton variant="sidebar" />
+        </div>
 
         {/* Org Info Footer */}
         <div className="p-3 border-t bg-muted/30">
