@@ -35,7 +35,11 @@ import {
   Building2,
   Plus,
   Mail,
+  Users,
+  UserPlus,
+  UserCheck,
 } from "lucide-react";
+import { UserRole, UserProfile } from "@/lib/types/database.types";
 import { translateText } from "@/lib/i18n/auto-translate";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 import { cn } from "@/lib/utils";
@@ -52,6 +56,9 @@ export default function SettingsPage() {
     users,
     teams,
     projects,
+    addUser,
+    updateUser,
+    deleteUser,
     addProject,
     updateProject,
     deleteProject,
@@ -64,6 +71,18 @@ export default function SettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [pushResult, setPushResult] = useState<{ success: boolean; message: string; raw?: any } | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  // User Management in Settings State
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPhone, setUserPhone] = useState("");
+  const [userRole, setUserRole] = useState<UserRole>("member");
+  const [userTeamId, setUserTeamId] = useState(teams[0]?.id || "team-consult");
+  const [userLineId, setUserLineId] = useState("");
+  const [showUserLineHelp, setShowUserLineHelp] = useState(false);
+  const [userMsg, setUserMsg] = useState<{ success: boolean; text: string } | null>(null);
 
   // Project Management Modal State
   const [showProjectModal, setShowProjectModal] = useState(false);
@@ -819,7 +838,379 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* 3. Projects Management Card (🏗️ จัดการโครงการก่อสร้างและบ้านจัดสรร) */}
+      {/* 3. User Management & Role Permissions Card (👥 จัดการบุคลากร & กำหนดสิทธิ์การใช้งาน) */}
+      <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm">
+        <CardHeader className="p-4 pb-3 border-b flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-emerald-600" />
+            <div>
+              <CardTitle className="text-sm font-bold text-foreground">
+                {lang === "th" ? "จัดการบุคลากร & กำหนดสิทธิ์การใช้งาน (User Management & RBAC)" : "User Management & Permissions"}
+              </CardTitle>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {lang === "th"
+                  ? "เพิ่ม แก้ไข ลบสมาชิก พร้อมกำหนดบทบาทสิทธิ์ (Admin, Manager, Member, Viewer), เบอร์โทร และ LINE User ID"
+                  : "Add, update, or remove members, assign RBAC roles, contact phone, and LINE User IDs"}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setEditingUserId(null);
+              setUserName("");
+              setUserEmail(`user${Date.now().toString().slice(-4)}@baansuay.com`);
+              setUserPhone("");
+              setUserRole("member");
+              setUserTeamId(teams[0]?.id || "team-consult");
+              setUserLineId("");
+              setShowUserLineHelp(false);
+              setUserMsg(null);
+              setShowUserModal(true);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-xs cursor-pointer"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>{lang === "th" ? "+ เพิ่มสมาชิก & กำหนดสิทธิ์" : "+ Add Member"}</span>
+          </Button>
+        </CardHeader>
+
+        <CardContent className="p-4 space-y-3">
+          {userMsg && (
+            <div className={`p-2.5 rounded-lg text-xs font-semibold flex items-center gap-2 ${userMsg.success ? "bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-rose-50 text-rose-800 border border-rose-300 dark:bg-rose-950/40 dark:text-rose-300"}`}>
+              {userMsg.success ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-rose-600" />}
+              <span>{userMsg.text}</span>
+            </div>
+          )}
+
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-muted/40 text-muted-foreground border-b text-[11px] font-semibold">
+                <tr>
+                  <th className="py-2.5 px-3">#</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "ชื่อ-นามสกุล / ตำแหน่ง" : "Full Name / Title"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "สิทธิ์ในระบบ (Role)" : "Role"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "ฝ่ายงาน (Department)" : "Department"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "อีเมลล็อกอิน" : "Email"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "เบอร์โทรศัพท์" : "Phone"}</th>
+                  <th className="py-2.5 px-3">{lang === "th" ? "การแจ้งเตือน LINE" : "LINE Status"}</th>
+                  <th className="py-2.5 px-3 text-right">{lang === "th" ? "การจัดการ" : "Actions"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {users.map((u, idx) => {
+                  const teamMatch = teams.find((t) => t.id === u.team_id);
+                  const teamName = teamMatch ? getLocalizedDynamicText(teamMatch.name, teamMatch.name_en, lang) : (lang === "th" ? "ฝ่ายออกแบบ" : "Design Team");
+                  const isCurrent = currentUser?.id === u.id;
+
+                  return (
+                    <tr key={u.id} className={`hover:bg-muted/30 transition-colors ${isCurrent ? "bg-emerald-50/30 dark:bg-emerald-950/20" : ""}`}>
+                      <td className="py-3 px-3 font-mono font-bold text-muted-foreground">{String(idx + 1).padStart(2, "0")}</td>
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-foreground flex items-center gap-1.5">
+                          <span>{u.full_name}</span>
+                          {isCurrent && (
+                            <span className="text-[9px] bg-emerald-600 text-white font-bold px-1.5 py-0.2 rounded">
+                              {lang === "th" ? "คุณ" : "You"}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <Badge
+                          variant={
+                            u.role === "admin"
+                              ? "default"
+                              : u.role === "manager"
+                              ? "high"
+                              : "medium"
+                          }
+                          className="text-[10px] uppercase font-bold"
+                        >
+                          {u.role}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="text-muted-foreground text-[11px] truncate max-w-[140px] block">
+                          {teamName}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-muted-foreground text-[11px]">
+                        {u.email}
+                      </td>
+                      <td className="py-3 px-3">
+                        {u.phone_number ? (
+                          <a
+                            href={`tel:${u.phone_number}`}
+                            className="text-blue-600 dark:text-blue-400 hover:underline font-medium flex items-center gap-1 text-[11px]"
+                          >
+                            <Smartphone className="h-3 w-3 shrink-0" />
+                            <span>{u.phone_number}</span>
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground/50 text-[10px]">-</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3">
+                        {u.line_user_id ? (
+                          <span
+                            className="text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-1.5 py-0.5 rounded font-bold inline-flex items-center gap-1 text-[10px]"
+                            title={u.line_user_id}
+                          >
+                            💬 Active
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/60 text-[10px]">
+                            ⚪ ยังไม่ผูก
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right space-x-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingUserId(u.id);
+                            setUserName(u.full_name || "");
+                            setUserEmail(u.email || "");
+                            setUserPhone(u.phone_number || "");
+                            setUserRole(u.role || "member");
+                            setUserTeamId(u.team_id || teams[0]?.id || "team-consult");
+                            setUserLineId(u.line_user_id || "");
+                            setShowUserLineHelp(false);
+                            setUserMsg(null);
+                            setShowUserModal(true);
+                          }}
+                          className="h-7 w-7 p-0 cursor-pointer text-muted-foreground hover:text-foreground"
+                          title={lang === "th" ? "แก้ไขข้อมูลและสิทธิ์" : "Edit Member & Role"}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        {users.length > 1 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (window.confirm(lang === "th" ? `ยืนยันการลบสมาชิก "${u.full_name}" หรือไม่?` : `Confirm deleting member "${u.full_name}"?`)) {
+                                const res = deleteUser(u.id);
+                                if (res.success) {
+                                  setUserMsg({ success: true, text: lang === "th" ? `ลบผู้ใช้ "${u.full_name}" เรียบร้อยแล้ว` : "User deleted successfully" });
+                                } else {
+                                  setUserMsg({ success: false, text: res.message || "Error" });
+                                }
+                              }
+                            }}
+                            className="h-7 w-7 p-0 cursor-pointer text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950"
+                            title={lang === "th" ? "ลบสมาชิก" : "Delete Member"}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* User Add / Edit Modal Dialog */}
+      <Dialog open={showUserModal} onOpenChange={setShowUserModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-emerald-600" />
+              <span>
+                {editingUserId
+                  ? (lang === "th" ? "แก้ไขข้อมูล & กำหนดสิทธิ์สมาชิก" : "Edit Member & Role")
+                  : (lang === "th" ? "เพิ่มสมาชิกใหม่ & กำหนดสิทธิ์ (Add Member)" : "Add Member & Assign Role")}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!userName.trim() || !userEmail.trim()) return;
+
+              if (editingUserId) {
+                updateUser(editingUserId, {
+                  full_name: userName.trim(),
+                  email: userEmail.trim(),
+                  phone_number: userPhone.trim() || null,
+                  role: userRole,
+                  team_id: userTeamId || teams[0]?.id,
+                  line_user_id: userLineId.trim() || null,
+                });
+                setUserMsg({ success: true, text: lang === "th" ? `อัปเดตข้อมูลคุณ "${userName}" เรียบร้อยแล้ว` : `Updated ${userName} successfully` });
+              } else {
+                addUser({
+                  full_name: userName.trim(),
+                  email: userEmail.trim(),
+                  phone_number: userPhone.trim() || undefined,
+                  role: userRole,
+                  team_id: userTeamId || teams[0]?.id,
+                  line_user_id: userLineId.trim() || undefined,
+                });
+                setUserMsg({ success: true, text: lang === "th" ? `เพิ่มสมาชิก "${userName}" และกำหนดสิทธิ์ ${userRole.toUpperCase()} เรียบร้อยแล้ว` : `Added ${userName} with ${userRole.toUpperCase()} role` });
+              }
+              setShowUserModal(false);
+            }}
+            className="space-y-4 text-xs pt-2"
+          >
+            {/* Full Name */}
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">
+                {lang === "th" ? "ชื่อ-นามสกุล / ตำแหน่งที่ต้องการแสดง:" : "Full Name / Display Title:"} <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                required
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder={lang === "th" ? "เช่น คุณสมชาย (โฟร์แมน แปลง 1-30), วิศวกรเอก" : "e.g. John Doe (Site Engineer)"}
+                className="text-xs"
+              />
+            </div>
+
+            {/* Role (RBAC Selection) */}
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">
+                {lang === "th" ? "กำหนดบทบาทและสิทธิ์ในระบบ (System Role / RBAC):" : "Assign System Role (RBAC):"} <span className="text-rose-500">*</span>
+              </label>
+              <Select
+                value={userRole}
+                onChange={(e) => setUserRole(e.target.value as UserRole)}
+                className="text-xs"
+              >
+                <option value="admin">👑 Admin ({lang === "th" ? "ผู้ดูแลระบบ — จัดการได้ทุกอย่าง / ตรวจรับงานได้" : "Full Admin Access"})</option>
+                <option value="manager">👔 Manager ({lang === "th" ? "ผู้จัดการ/หัวหน้างาน — มอบหมาย & ตรวจรับงาน" : "Supervisor / Reviewer"})</option>
+                <option value="member">👷 Member ({lang === "th" ? "ผู้ปฏิบัติงาน — ทำงาน / ส่งงานตรวจ / แจ้งปัญหา" : "Standard Assignee"})</option>
+                <option value="viewer">👁️ Viewer ({lang === "th" ? "ผู้สังเกตการณ์ — ดูข้อมูลได้อย่างเดียว" : "Read-only Viewer"})</option>
+              </Select>
+            </div>
+
+            {/* Email & Phone Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold mb-1 text-foreground">
+                  {lang === "th" ? "อีเมล (Email สำหรับล็อกอิน):" : "Work Email:"} <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  type="email"
+                  required
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  placeholder="name@baansuay.com"
+                  className="text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-foreground flex items-center justify-between">
+                  <span>{lang === "th" ? "เบอร์โทรศัพท์:" : "Phone Number:"}</span>
+                  <span className="text-[10px] text-muted-foreground">{lang === "th" ? "มีก็ใส่" : "Optional"}</span>
+                </label>
+                <Input
+                  type="tel"
+                  value={userPhone}
+                  onChange={(e) => setUserPhone(e.target.value)}
+                  placeholder="081-234-5678"
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Department / Team */}
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">
+                {lang === "th" ? "สังกัดฝ่ายงาน (Department):" : "Assigned Department:"}
+              </label>
+              <Select
+                value={userTeamId}
+                onChange={(e) => setUserTeamId(e.target.value)}
+                className="text-xs"
+              >
+                {teams.map((t, idx) => (
+                  <option key={t.id} value={t.id}>
+                    {String(idx + 1).padStart(2, "0")}. {getLocalizedDynamicText(t.name || "ฝ่ายงาน", t.name_en, lang)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* LINE User ID (For Direct Push) */}
+            <div className="p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Smartphone className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>{lang === "th" ? "LINE User ID สำหรับรับแจ้งเตือนส่วนตัว:" : "LINE User ID (Direct Push):"}</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowUserLineHelp(!showUserLineHelp)}
+                  className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold hover:underline cursor-pointer"
+                >
+                  {showUserLineHelp ? (lang === "th" ? "▲ ปิดคำแนะนำ" : "▲ Close Guide") : (lang === "th" ? "💡 วิธีดู Line ID คลิก" : "💡 How to get Line ID")}
+                </button>
+              </div>
+
+              <Input
+                value={userLineId}
+                onChange={(e) => setUserLineId(e.target.value)}
+                placeholder="e.g. U8a9b7c6d5e4f3a2b1c0d9e8f7a6b5c4d"
+                className="text-xs font-mono bg-background"
+              />
+
+              {showUserLineHelp && (
+                <div className="p-2.5 rounded bg-white dark:bg-slate-900 border text-[11px] text-muted-foreground space-y-1.5 animate-in fade-in">
+                  <p className="font-semibold text-foreground">
+                    {lang === "th" ? "📱 ขั้นตอนการรับรหัส Line User ID (ทำครั้งเดียว):" : "📱 How to get your Line User ID:"}
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1 text-[10px]">
+                    <li>
+                      {lang === "th" ? "เพิ่มเพื่อน LINE OA ที่ LINE ID: " : "Add LINE OA: "}
+                      <strong className="text-emerald-600 font-mono">@739cutlg</strong> (Faraday-ARCH)
+                    </li>
+                    <li>
+                      {lang === "th" ? "พิมพ์คำว่า " : "Send message "}
+                      <strong className="text-emerald-600">ID</strong>
+                      {lang === "th" ? " หรือ " : " or "}
+                      <strong className="text-emerald-600">สวัสดี</strong>
+                      {lang === "th" ? " ส่งเข้าไปในแชท" : " in chat"}
+                    </li>
+                    <li>
+                      {lang === "th" ? "บอทจะตอบกลับรหัส User ID (เช่น U8a9b...) คัดลอกมากรอกในช่องนี้ได้ทันที" : "Copy the returned User ID and paste here."}
+                    </li>
+                  </ol>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowUserModal(false)}
+              >
+                {lang === "th" ? "ยกเลิก" : "Cancel"}
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+              >
+                {lang === "th" ? "บันทึกข้อมูลสมาชิก" : "Save Member"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 4. Projects Management Card (🏗️ จัดการโครงการก่อสร้างและบ้านจัดสรร) */}
       <Card className="border-emerald-200 dark:border-emerald-900 shadow-sm">
         <CardHeader className="p-4 pb-3 border-b flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">

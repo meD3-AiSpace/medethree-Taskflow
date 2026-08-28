@@ -25,6 +25,7 @@ import {
   UserPlus,
   RotateCcw,
   Search,
+  ShieldCheck,
 } from "lucide-react";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 
@@ -222,11 +223,11 @@ export default function TeamsPage() {
 
           <Button
             size="sm"
-            onClick={() => handleOpenCreateUser()}
+            onClick={() => router.push("/settings")}
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5 shadow-sm cursor-pointer"
           >
-            <UserPlus className="h-4 w-4" />
-            <span>{lang === "th" ? "+ เพิ่มสมาชิก / กำหนดสิทธิ์" : "+ Add User / Set Role"}</span>
+            <ShieldCheck className="h-4 w-4" />
+            <span>{lang === "th" ? "⚙️ จัดการสมาชิก & สิทธิ์ ในหน้า Settings" : "⚙️ Manage Users in Settings"}</span>
           </Button>
         </div>
       </div>
