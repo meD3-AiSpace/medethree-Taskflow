@@ -35,15 +35,19 @@ export const dynamicDictionary: Record<string, string> = {
   "จัดการบัญชีต้นทุนโครงการ การเบิกจ่ายงวดงาน ภาษีที่ดิน และบริหารกระแสเงินสด": "Project cost accounting, contractor payment disbursements, land taxes, and corporate cash flow management.",
   "งานสารบรรณ ธุรการ จัดการเอกสารสัญญา บริหารทรัพยากรบุคคล และยานพาหนะส่วนกลาง": "General administration, official contract management, human resources (HR), and corporate fleet support.",
 
-  // User Default Names
-  "สมเกียรติ สถาปัตย์ (MD / Project Director)": "Somkiat Sthapat (MD / Project Director)",
-  "วิชัย บริหารงาน (Project Manager / Supervisor)": "Wichai Borihan (Project Manager / Supervisor)",
-  "กานดา สถาปนิก (Senior Architect / Design Lead)": "Kanda Sthapanik (Senior Architect / Design Lead)",
-  "ธวัชชัย ช่างคุมงาน (Site Engineer / Supervisor)": "Thawatchai Changkumngan (Site Engineer / Supervisor)",
-  "ประเสริฐ วิศวกรงานระบบ (MEP Engineer)": "Prasert MEP (MEP Systems Engineer)",
-  "ศิริพร ประมาณราคา (QS / Cost Controller)": "Siriporn QS (Cost Controller / QS)",
-  "อรอนงค์ การตลาด (Marketing & Sales Executive)": "Oranong Marketing (Marketing & Sales Executive)",
-  "ณรงค์เดช ตรวจรับมอบบ้าน (QA/QC Inspector)": "Narongdej QA/QC (Home Handover Inspector)",
+  // User Authentic Names
+  "X มีดีที่จำกัด (ที่ปรึกษาและAdmin)": "X MeDTree (Advisor & Admin)",
+  "พี่อู๊ด Director": "P'Oud (Director)",
+  "พี่หมู หัวหน้าสถาปนิก (Senior Architect / Design Lead)": "P'Moo (Lead Architect & Design Lead)",
+  "น้องเอิน สถาปนิกโครงการ": "Nong Ern (Project Architect)",
+  "พี่ต้น สถาปนิกโครงการ": "P'Ton (Project Architect)",
+  "พี่วิช วิศวกรงานระบบPARAGON (MEP Engineer)": "P'Wich (PARAGON MEP Engineer)",
+  "พี่เอก วิศวกรงานระบบ BOPHUD(MEP Engineer)": "P'Aek (BOPHUD MEP Engineer)",
+  "P'Game ประมาณราคา (QS / Cost Controller)": "P'Game (Cost Controller & QS)",
+  "พี่โจ ช่างคุมงาน (Site Engineer / Supervisor)": "P'Joe (Site Engineer & Supervisor)",
+  "P'PITA หัวหน้าการตลาด (Marketing & Sales Executive)": "P'PITA (Marketing & Sales Lead)",
+  "พี่ทับทิม บัญชี": "P'Tubtim (Accounting & Finance)",
+  "พี่หนุ่มพี่ออย จัดซื้อ": "P'Num & P'Oil (Procurement)",
 
   // Notifications
   "มีปัญหาติดขัดใหม่": "New Blocker / Issue Logged",
