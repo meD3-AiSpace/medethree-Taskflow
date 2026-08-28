@@ -96,20 +96,20 @@ export function ExecutiveKPICards({
         </div>
       </div>
 
-      {/* 3. Total Man-Hours Logged */}
+      {/* 3. Active Operations (In-Progress Tasks) */}
       <div className="p-4 rounded-xl border bg-card shadow-xs flex flex-col justify-between space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground">
-            {lang === "th" ? "ชั่วโมงทำงานรวม" : "Logged Hours"}
+            {lang === "th" ? "งานกำลังดำเนินการ" : "Active Operations"}
           </span>
           <div className="h-7 w-7 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center">
-            <Clock className="h-4 w-4" />
+            <Zap className="h-4 w-4" />
           </div>
         </div>
         <div>
-          <div className="text-2xl font-black text-foreground">{totalHours} <span className="text-xs font-normal text-muted-foreground">ชม.</span></div>
+          <div className="text-2xl font-black text-foreground">{inProgressTasks}</div>
           <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-0.5">
-            {lang === "th" ? `จาก ${timeEntries.length} บันทึกงาน` : `Across ${timeEntries.length} logs`}
+            {lang === "th" ? `จากทั้งหมด ${totalTasks} งาน` : `Out of ${totalTasks} total tasks`}
           </p>
         </div>
       </div>

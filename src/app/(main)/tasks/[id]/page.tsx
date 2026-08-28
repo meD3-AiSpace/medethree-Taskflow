@@ -37,7 +37,6 @@ import {
 import { IssueSection } from "@/components/tasks/issue-section";
 import { PermitSection } from "@/components/tasks/permit-section";
 import { ActivityTimeline } from "@/components/tasks/activity-timeline";
-import { TimeTrackingSection } from "@/components/tasks/time-tracking-section";
 import { DeliverablesAttachmentSection } from "@/components/tasks/deliverables-attachment-section";
 import { CommentSection } from "@/components/tasks/comment-section";
 import { QuickLogIssueModal } from "@/components/tasks/quick-issue-modal";
@@ -341,10 +340,10 @@ export default function TaskDetailPage() {
               </span>
             </TabsTrigger>
 
-            {/* Tab 2: Issues & Work Log */}
+            {/* Tab 2: Issues & Blockers */}
             <TabsTrigger value="support" className="text-xs gap-1.5 flex-1 py-2 font-medium">
               <ShieldAlert className="h-4 w-4 text-rose-500" />
-              <span>{lang === "th" ? "🛡️ ปัญหาติดขัด & บันทึกเวลา" : "Blockers & Work Log"}</span>
+              <span>{lang === "th" ? "🚨 ปัญหา & ติดขัด (Issues & Blockers)" : "Issues & Blockers"}</span>
               {(task.unresolved_issues_count || 0) > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
                   {task.unresolved_issues_count}
@@ -376,16 +375,11 @@ export default function TaskDetailPage() {
             </div>
           </TabsContent>
 
-          {/* TAB 2: Unified Support & Work Log (Blockers + Time Tracking) */}
+          {/* TAB 2: Issues & Blockers Only */}
           <TabsContent value="support" className="pt-4 space-y-6">
             {/* Blocker / Clash Reporting */}
             <div className="space-y-2.5">
               <IssueSection taskId={task.id} />
-            </div>
-
-            {/* Friendly Time Tracking & Work Log */}
-            <div className="pt-4 border-t space-y-2.5">
-              <TimeTrackingSection taskId={task.id} />
             </div>
           </TabsContent>
 
