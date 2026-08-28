@@ -78,30 +78,16 @@ export default function TaskDetailPage() {
     currentUser,
   } = useTaskStore();
 
-  // Robust Task Resolver: Searches current state, aliases, cloud UUIDs, and title fuzzy match
+  // Robust Task Resolver: Searches current state by exact ID or partial UUID
   const task =
     tasks.find((t) => t.id === taskId) ||
-    (taskId === "task-1"
-      ? tasks.find((t) => t.id === "t1111111-1111-1111-1111-111111111111" || t.title.includes("แปลน") || t.title.includes("Layout"))
-      : undefined) ||
-    (taskId === "task-2"
-      ? tasks.find((t) => (t.unresolved_issues_count ?? 0) > 0 || t.title.includes("โครงสร้าง") || t.title.includes("ท่อ") || t.title.includes("สุขาภิบาล")) ||
-        tasks.find((t) => t.id === "task-2") ||
-        tasks[0]
-      : undefined) ||
-    (taskId === "task-3"
-      ? tasks.find((t) => t.id === "t3333333-1111-1111-1111-111111111111" || t.category === "permit")
-      : undefined) ||
-    (taskId === "task-5"
-      ? tasks.find((t) => t.id === "t5555555-1111-1111-1111-111111111111" || t.title.includes("สำรวจ"))
-      : undefined) ||
     tasks.find((t) => t.id.includes(taskId.replace("task-", ""))) ||
     tasks[0];
 
   const resolvedTaskId = task?.id || taskId;
   const taskComments = comments.filter((c) => c.task_id === resolvedTaskId || c.task_id === taskId);
   const taskAttachments = attachments.filter((a) => a.task_id === resolvedTaskId || a.task_id === taskId);
-  const taskIssues = issues.filter((i) => i.task_id === resolvedTaskId || i.task_id === taskId || (resolvedTaskId === "task-2" && (i.task_id === "task-2" || i.task_id === "t2222222-1111-1111-1111-111111111111")));
+  const taskIssues = issues.filter((i) => i.task_id === resolvedTaskId || i.task_id === taskId);
   const taskTimeEntries = timeEntries.filter((e) => e.task_id === resolvedTaskId || e.task_id === taskId);
   const totalMinutes = taskTimeEntries.reduce((acc, l) => acc + (l.duration_minutes || 0), 0);
   const totalHours = (totalMinutes / 60).toFixed(1);

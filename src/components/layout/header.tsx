@@ -22,6 +22,7 @@ interface HeaderProps {
 export function Header({ onOpenMobileMenu }: HeaderProps) {
   const router = useRouter();
   const {
+    tasks,
     currentUser,
     users,
     login,
@@ -40,7 +41,9 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
 
   const menuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const activeTaskIds = new Set(tasks.map((t) => t.id));
+  const validNotifications = notifications.filter((n) => !n.task_id || activeTaskIds.has(n.task_id));
+  const unreadCount = validNotifications.filter((n) => !n.is_read).length;
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -199,12 +202,12 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
 
               {/* Notification List */}
               <div className="max-h-72 overflow-y-auto space-y-1.5 pr-0.5 divide-y divide-border/40">
-                {notifications.length === 0 ? (
+                {validNotifications.length === 0 ? (
                   <div className="py-8 text-center text-muted-foreground text-xs">
                     {lang === "th" ? "ไม่มีการแจ้งเตือนใหม่" : "No new notifications"}
                   </div>
                 ) : (
-                  notifications.slice(0, 5).map((n) => {
+                  validNotifications.slice(0, 5).map((n) => {
                     const isIssue = n.type === "issue_logged";
                     return (
                       <div

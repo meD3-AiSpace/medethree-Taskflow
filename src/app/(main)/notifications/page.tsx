@@ -11,10 +11,12 @@ import { formatDateTime } from "@/lib/utils";
 import { getLocalizedDynamicText } from "@/lib/i18n/dynamic-translator";
 
 export default function NotificationsPage() {
-  const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useTaskStore();
+  const { tasks, notifications, markNotificationAsRead, markAllNotificationsAsRead } = useTaskStore();
   const { t, lang } = useLanguage();
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const activeTaskIds = new Set(tasks.map((t) => t.id));
+  const validNotifications = notifications.filter((n) => !n.task_id || activeTaskIds.has(n.task_id));
+  const unreadCount = validNotifications.filter((n) => !n.is_read).length;
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -50,7 +52,7 @@ export default function NotificationsPage() {
 
       {/* Notification List */}
       <div className="space-y-3">
-        {notifications.length === 0 ? (
+        {validNotifications.length === 0 ? (
           <div className="p-12 rounded-xl border border-dashed text-center bg-card">
             <Bell className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
             <p className="text-sm font-semibold text-foreground">{t("noNotifications")}</p>
@@ -61,7 +63,7 @@ export default function NotificationsPage() {
             </p>
           </div>
         ) : (
-          notifications.map((notif) => {
+          validNotifications.map((notif) => {
             const displayTitle = getLocalizedDynamicText(notif.title, notif.title_en, lang);
             const displayMessage = getLocalizedDynamicText(notif.message, notif.message_en, lang);
 

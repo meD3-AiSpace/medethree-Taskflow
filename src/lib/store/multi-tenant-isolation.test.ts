@@ -148,4 +148,26 @@ describe("Phase 2: Enterprise Multi-Tenant & RLS Isolation Suite", () => {
     expect(reassignedTask.assignees?.[0].id).toBe(userB.id);
     expect(reassignedTask.assignees?.[0].full_name).toBe("External Auditor");
   });
+
+  it("should enforce active task referential integrity for notifications and issue counters", () => {
+    const tasks = [taskOrgA];
+    const issues = [
+      { id: "iss-1", task_id: taskOrgA.id, is_resolved: true },
+      { id: "iss-orphan", task_id: "deleted-task-999", is_resolved: false },
+    ];
+    const notifications = [
+      { id: "n-1", task_id: taskOrgA.id, is_read: false },
+      { id: "n-orphan", task_id: "deleted-task-999", is_read: false },
+    ];
+
+    const activeTaskIds = new Set(tasks.map((t) => t.id));
+    const activeUnresolvedIssues = issues.filter((i) => !i.is_resolved && activeTaskIds.has(i.task_id));
+    const validUnreadNotifs = notifications.filter((n) => !n.is_read && (!n.task_id || activeTaskIds.has(n.task_id)));
+
+    // Active task has 0 unresolved issues because iss-1 is resolved, and orphan issue is excluded
+    expect(activeUnresolvedIssues.length).toBe(0);
+    // Only notification for active task is counted (orphan is excluded)
+    expect(validUnreadNotifs.length).toBe(1);
+    expect(validUnreadNotifs[0].id).toBe("n-1");
+  });
 });

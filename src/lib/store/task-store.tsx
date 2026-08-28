@@ -325,368 +325,14 @@ const defaultProjects: Project[] = [
   },
 ];
 
-// Rich Bilingual Initial Sample Tasks
-const initialTasks: Task[] = [
-  {
-    id: "task-1",
-    org_id: defaultOrg.id,
-    project_id: "p-1",
-    category: "design",
-    title: "ออกแบบแปลนชั้น 1 และบันไดหลัก The Forest Villa",
-    title_en: "Design 1st Floor Plan and Main Staircase for The Forest Villa",
-    description: "ออกแบบ Schematic Design แปลนชั้นล่างเชื่อมต่อสระว่ายน้ำ และระบุระดับบันได",
-    description_en: "Schematic Design of ground floor layout connecting to swimming pool and staircase elevation specifications",
-    status: "in_progress",
-    priority: "high",
-    created_by: "u-manager",
-    deadline: new Date(Date.now() + 3 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-    project: defaultProjects[0],
-    creator: defaultUsers[1],
-    assignees: [defaultUsers[2]],
-    comments_count: 2,
-    unresolved_issues_count: 0,
-  },
-  {
-    id: "task-2",
-    org_id: defaultOrg.id,
-    project_id: "p-1",
-    category: "design",
-    title: "แก้แบบโครงสร้างชั้น 3 ติดแนวท่องานระบบสุขาภิบาล",
-    title_en: "Revise 3rd Floor Structural Plan Due to Sanitary Pipe Clash",
-    description: "ท่อสุขาภิบาลชนคานโครงสร้างหลัก ต้องปรับระดับฝ้าเพดานหรือเบี่ยงท่องานระบบ",
-    description_en: "Sanitary drainage pipe clashing with main structural beam; requires ceiling elevation adjustment or MEP offset",
-    status: "in_progress",
-    priority: "urgent",
-    created_by: "u-manager",
-    deadline: new Date(Date.now() + 1 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-    project: defaultProjects[0],
-    creator: defaultUsers[1],
-    assignees: [defaultUsers[2], defaultUsers[4]],
-    comments_count: 1,
-    unresolved_issues_count: 1,
-  },
-  {
-    id: "task-3",
-    org_id: defaultOrg.id,
-    project_id: "p-2",
-    category: "permit",
-    title: "ยื่นขอใบอนุญาตก่อสร้าง อ.1 (คอนโดมิเนียมสุขุมวิท 49)",
-    title_en: "Submit Building Construction Permit Form A.1 (Sukhumvit 49 Condo)",
-    description: "ยื่นเอกสารแบบขออนุญาตก่อสร้างอาคารชุด ณ สำนักงานเขตวัฒนา กรุงเทพฯ",
-    description_en: "Submit architectural application for condominium construction permit at Watthana District Office, Bangkok",
-    status: "in_progress",
-    priority: "urgent",
-    created_by: "u-admin",
-    deadline: new Date(Date.now() + 12 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-    project: defaultProjects[1],
-    creator: defaultUsers[0],
-    assignees: [defaultUsers[0]],
-    permit_details: {
-      task_id: "task-3",
-      permit_type: "ใบอนุญาตก่อสร้าง (อ.1)",
-      permit_type_en: "Building Construction Permit (Form A.1)",
-      authority: "สำนักงานเขตวัฒนา กรุงเทพฯ",
-      authority_en: "Watthana District Office, Bangkok",
-      submitted_date: new Date(Date.now() - 10 * 86400000).toISOString().split("T")[0],
-      target_approval_date: new Date(Date.now() + 20 * 86400000).toISOString().split("T")[0],
-      revision_round: 1,
-      permit_status: "needs_revision",
-    },
-    comments_count: 3,
-    unresolved_issues_count: 1,
-  },
-  {
-    id: "task-4",
-    org_id: defaultOrg.id,
-    project_id: "p-1",
-    category: "design",
-    title: "ส่งแบบ 3D Perspective ห้อง Master Bedroom",
-    title_en: "Submit 3D Perspective Rendering for Master Bedroom",
-    description: "เรนเดอร์ภาพ Perspective ความละเอียดสูง 4K ส่งให้ Supervisor ตรวจรับ",
-    description_en: "High-resolution 4K architectural perspective rendering submitted for Supervisor sign-off",
-    status: "review",
-    priority: "medium",
-    created_by: "u-manager",
-    deadline: new Date(Date.now() + 2 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 4 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-    project: defaultProjects[0],
-    creator: defaultUsers[1],
-    assignees: [defaultUsers[2]],
-    comments_count: 2,
-    unresolved_issues_count: 0,
-  },
-  {
-    id: "task-5",
-    org_id: defaultOrg.id,
-    project_id: "p-1",
-    category: "site",
-    title: "สำรวจพื้นที่หน้างานจริงและตรวจระดับหมุดที่ดิน",
-    title_en: "Site Survey & Property Boundary Elevation Verification",
-    description: "เช็คค่าระดับถนนเทียบกับระดับพื้นโครงการ The Forest Villa",
-    description_en: "Inspect finished road elevation level compared to The Forest Villa finished floor level benchmark",
-    status: "completed",
-    priority: "low",
-    created_by: "u-manager",
-    deadline: new Date(Date.now() - 5 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 8 * 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-    project: defaultProjects[0],
-    creator: defaultUsers[1],
-    assignees: [defaultUsers[3]],
-    comments_count: 1,
-    unresolved_issues_count: 0,
-  },
-  {
-    id: "task-6",
-    org_id: defaultOrg.id,
-    project_id: "p-2",
-    category: "permit",
-    title: "จัดเตรียมเอกสารรายงานผลกระทบสิ่งแวดล้อม (EIA)",
-    title_en: "Prepare Environmental Impact Assessment (EIA) Report",
-    description: "รวบรวมเล่มเอกสารและรายงานการศึกษาผลกระทบสิ่งแวดล้อม",
-    description_en: "Compile documentation and comprehensive study report for environmental impact evaluation",
-    status: "assigned",
-    priority: "high",
-    created_by: "u-admin",
-    deadline: new Date(Date.now() + 25 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-    project: defaultProjects[1],
-    creator: defaultUsers[0],
-    assignees: [defaultUsers[0]],
-    permit_details: {
-      task_id: "task-6",
-      permit_type: "รายงานผลกระทบสิ่งแวดล้อม (EIA)",
-      permit_type_en: "Environmental Impact Assessment (EIA)",
-      authority: "สำนักงานนโยบายและแผนทรัพยากรธรรมชาติและสิ่งแวดล้อม (สผ.)",
-      authority_en: "Office of Natural Resources and Environmental Policy and Planning (ONEP)",
-      submitted_date: null,
-      target_approval_date: new Date(Date.now() + 45 * 86400000).toISOString().split("T")[0],
-      revision_round: 0,
-      permit_status: "preparing",
-    },
-    comments_count: 0,
-    unresolved_issues_count: 0,
-  },
-];
-
-// Rich Bilingual Issues
-const initialIssues: TaskIssue[] = [
-  {
-    id: "issue-1",
-    task_id: "task-2",
-    issue_description: "คานคอนกรีตระดับ +3.20m ชนแนวท่อระบายน้ำหลัก ไม่สามารถวางท่อลาดเอียง 1:100 ได้",
-    issue_description_en: "Concrete beam at level +3.20m clashes with main drainage pipe; unable to maintain 1:100 slope gradient",
-    raised_by: "u-designer",
-    raised_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    is_resolved: false,
-    raised_user: defaultUsers[2],
-  },
-  {
-    id: "issue-2",
-    task_id: "task-3",
-    issue_description: "เจ้าหน้าที่เขตแจ้งว่าระยะร่นด้านข้างอาคารฝั่งทิศตะวันออกขาดไป 15 cm ตามข้อบัญญัติ กทม.",
-    issue_description_en: "District authority notified that east side setback lacks 15cm under Bangkok Metropolitan Administration building regulation",
-    raised_by: "u-admin",
-    raised_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    is_resolved: false,
-    raised_user: defaultUsers[0],
-  },
-  {
-    id: "issue-3",
-    task_id: "task-5",
-    issue_description: "พบหมุดหลักเขตที่ดินฝั่งทิศใต้ถูกถมดินทับมองไม่เห็น",
-    issue_description_en: "South boundary marker was buried and obscured by landfill elevation",
-    raised_by: "u-designer",
-    raised_at: new Date(Date.now() - 7 * 86400000).toISOString(),
-    is_resolved: true,
-    resolved_by: "u-site",
-    resolved_at: new Date(Date.now() - 6 * 86400000).toISOString(),
-    resolution_description: "ประสานงานเจ้าหน้าที่รังวัดที่ดินใช้เครื่องมือค้นหาและปักหมุดชั่วคราวแล้ว",
-    resolution_description_en: "Coordinated with land survey officers to trace boundary and installed certified temporary benchmark",
-    raised_user: defaultUsers[2],
-    resolved_user: defaultUsers[3],
-  },
-];
-
-const initialActivityLogs: ActivityLog[] = [
-  {
-    id: "log-1",
-    task_id: "task-1",
-    user_id: "u-manager",
-    action: "status_changed",
-    old_value: "assigned",
-    new_value: "in_progress",
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    user: defaultUsers[1],
-  },
-  {
-    id: "log-2",
-    task_id: "task-2",
-    user_id: "u-manager",
-    action: "priority_changed",
-    old_value: "high",
-    new_value: "urgent",
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    user: defaultUsers[1],
-  },
-  {
-    id: "log-3",
-    task_id: "task-3",
-    user_id: "u-admin",
-    action: "permit_status_changed",
-    old_value: "under_review",
-    new_value: "needs_revision",
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    user: defaultUsers[0],
-  },
-];
-
-const initialComments: Comment[] = [
-  {
-    id: "comm-1",
-    task_id: "task-1",
-    user_id: "u-designer",
-    content: "กำลังจัดวางบันไดแบบ Double Flight เชื่อมกับโถงต้อนรับครับ",
-    content_en: "Currently designing double-flight staircase layout connected to the main entrance foyer.",
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    user: defaultUsers[2],
-  },
-  {
-    id: "comm-2",
-    task_id: "task-4",
-    user_id: "u-designer",
-    content: "แนบภาพเรนเดอร์ perspective 4k มุมมองหลักและ Walk-in closet เรียบร้อยแล้วครับ รบกวนตรวจรับครับ",
-    content_en: "Attached 4K perspective renderings for master bedroom and walk-in closet. Ready for supervisor inspection.",
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    user: defaultUsers[2],
-  },
-];
-
-const initialNotifications: NotificationItem[] = [
-  {
-    id: "notif-1",
-    user_id: "u-designer",
-    task_id: "task-2",
-    type: "issue_logged",
-    title: "มีปัญหาติดขัดใหม่",
-    title_en: "New Blocker / Issue Logged",
-    message: "งานแก้แบบโครงสร้างชั้น 3 ติดแนวท่องานระบบ มีการแจ้งติดปัญหา",
-    message_en: "Revise 3rd floor structural plan: new blocker issue reported regarding MEP clash.",
-    is_read: false,
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-  {
-    id: "notif-2",
-    user_id: "u-admin",
-    task_id: "task-3",
-    type: "status_changed",
-    title: "ใบขออนุญาตถูกตีกลับแก้ไข",
-    title_en: "Building Permit Revision Required",
-    message: "ใบอนุญาตก่อสร้าง อ.1 สำนักงานเขตวัฒนา มีคำสั่งให้แก้ไขระยะร่น",
-    message_en: "Building Permit A.1 (Watthana District Office): revision required for eastern building setback.",
-    is_read: false,
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-];
-
-// Phase 2: Initial Attachments Mock Data (with Compression Stats)
-const initialAttachments: TaskAttachment[] = [
-  {
-    id: "att-1",
-    task_id: "task-1",
-    file_name: "FloorPlan_L1_ForestVilla_Rev2.pdf",
-    file_type: "pdf",
-    file_url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80",
-    original_size_kb: 4520,
-    compressed_size_kb: 4520,
-    saved_percent: 0,
-    uploaded_by: "u-designer",
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    uploader: defaultUsers[2],
-  },
-  {
-    id: "att-2",
-    task_id: "task-4",
-    file_name: "Perspective_MasterBedroom_4K.jpg",
-    file_type: "image",
-    file_url: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1600&q=80",
-    thumbnail_url: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&q=80",
-    original_size_kb: 12400,
-    compressed_size_kb: 340,
-    saved_percent: 97,
-    uploaded_by: "u-designer",
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    uploader: defaultUsers[2],
-  },
-  {
-    id: "att-3",
-    task_id: "task-5",
-    file_name: "Site_Survey_Boundary_Photo.jpg",
-    file_type: "image",
-    file_url: "https://images.unsplash.com/photo-1541888946425-d0fbb186156a?w=1600&q=80",
-    thumbnail_url: "https://images.unsplash.com/photo-1541888946425-d0fbb186156a?w=400&q=80",
-    original_size_kb: 8900,
-    compressed_size_kb: 280,
-    saved_percent: 96,
-    uploaded_by: "u-site",
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-    uploader: defaultUsers[3],
-  },
-];
-
-// Phase 2: Initial Time Log Entries Mock Data (Friendly Work Log)
-const initialTimeEntries: TimeEntry[] = [
-  {
-    id: "time-1",
-    task_id: "task-1",
-    user_id: "u-designer",
-    duration_minutes: 120,
-    hours: 2,
-    minutes: 0,
-    entry_type: "preset",
-    note: "จัดวางแปลนผังพื้นชั้น 1 และกำหนดระยะขั้นบันได",
-    note_en: "Arranging 1st floor layout and specifying staircase tread/riser dimensions",
-    logged_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    user: defaultUsers[2],
-  },
-  {
-    id: "time-2",
-    task_id: "task-1",
-    user_id: "u-designer",
-    duration_minutes: 60,
-    hours: 1,
-    minutes: 0,
-    entry_type: "timer",
-    note: "ปรับระยะเสาและแนวท่อสุขาภิบาล",
-    note_en: "Adjusting column spacing and sanitary pipe path",
-    logged_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    user: defaultUsers[2],
-  },
-  {
-    id: "time-3",
-    task_id: "task-2",
-    user_id: "u-mep",
-    duration_minutes: 90,
-    hours: 1,
-    minutes: 30,
-    entry_type: "manual",
-    note: "ตรวจสอบแนวท่อน้ำทิ้งและจำลองระดับฝ้าเพดาน",
-    note_en: "Checking wastewater pipe route and simulating ceiling cavity clearance",
-    logged_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    user: defaultUsers[4],
-  },
-];
+// Initial Live Production State Arrays (Zero Mock Data)
+const initialTasks: Task[] = [];
+const initialIssues: TaskIssue[] = [];
+const initialActivityLogs: ActivityLog[] = [];
+const initialComments: Comment[] = [];
+const initialNotifications: NotificationItem[] = [];
+const initialAttachments: TaskAttachment[] = [];
+const initialTimeEntries: TimeEntry[] = [];
 
 interface TaskContextType {
   currentUser: UserProfile;
@@ -880,17 +526,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
           attachments: taskAtts.length > 0 ? taskAtts : (localTask?.attachments || []),
           permit_details: permit || localTask?.permit_details || undefined,
           comments_count: taskComments.length,
-          unresolved_issues_count: taskIssues.length || localTask?.unresolved_issues_count || 0,
+          unresolved_issues_count: taskIssues.length,
         };
       });
 
-      if (mappedTasks.length > 0) {
-        setTasks(mappedTasks);
-        try { localStorage.setItem("taskflow_tasks", JSON.stringify(mappedTasks)); } catch {}
-      }
+      setTasks(mappedTasks);
+      try { localStorage.setItem("taskflow_tasks", JSON.stringify(mappedTasks)); } catch {}
     }
 
-    if (cloudData.teams && cloudData.teams.length > 0) {
+    if (cloudData.teams && Array.isArray(cloudData.teams) && cloudData.teams.length > 0) {
       const mergedTeams: Team[] = cloudData.teams.map((ct: any) => ({
         id: ct.id,
         org_id: ct.org_id || defaultOrg.id,
@@ -938,15 +582,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    if (cloudData.comments && cloudData.comments.length > 0) setComments(cloudData.comments);
-    if (cloudData.attachments && cloudData.attachments.length > 0) setAttachments(cloudData.attachments);
-
-    // Robust Issue State Sync
-    if (cloudData.issues && Array.isArray(cloudData.issues) && cloudData.issues.length > 0) {
-      setIssues(cloudData.issues);
-    }
-    if (cloudData.timeEntries && cloudData.timeEntries.length > 0) setTimeEntries(cloudData.timeEntries);
-    if (cloudData.activityLogs && cloudData.activityLogs.length > 0) setActivityLogs(cloudData.activityLogs);
+    if (cloudData.comments && Array.isArray(cloudData.comments)) setComments(cloudData.comments);
+    if (cloudData.attachments && Array.isArray(cloudData.attachments)) setAttachments(cloudData.attachments);
+    if (cloudData.issues && Array.isArray(cloudData.issues)) setIssues(cloudData.issues);
+    if (cloudData.timeEntries && Array.isArray(cloudData.timeEntries)) setTimeEntries(cloudData.timeEntries);
+    if (cloudData.activityLogs && Array.isArray(cloudData.activityLogs)) setActivityLogs(cloudData.activityLogs);
   };
 
   const syncCloudData = async (): Promise<boolean> => {
@@ -1413,8 +1053,23 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       return { success: false, message: "เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถลบงานได้" };
     }
     const updatedTasks = tasks.filter((t) => t.id !== taskId);
+    const updatedIssues = issues.filter((i) => i.task_id !== taskId);
+    const updatedComments = comments.filter((c) => c.task_id !== taskId);
+    const updatedAttachments = attachments.filter((a) => a.task_id !== taskId);
+    const updatedNotifs = notifications.filter((n) => n.task_id !== taskId);
+
     setTasks(updatedTasks);
-    saveState(updatedTasks, issues, activityLogs);
+    setIssues(updatedIssues);
+    setComments(updatedComments);
+    setAttachments(updatedAttachments);
+    setNotifications(updatedNotifs);
+
+    saveState(updatedTasks, updatedIssues, activityLogs);
+    try {
+      localStorage.setItem("taskflow_notifications", JSON.stringify(updatedNotifs));
+      localStorage.setItem("taskflow_comments", JSON.stringify(updatedComments));
+      localStorage.setItem("taskflow_attachments", JSON.stringify(updatedAttachments));
+    } catch {}
 
     // Delete from Supabase Cloud
     SupabaseSyncService.deleteTask(taskId);
@@ -1534,10 +1189,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setIssues(updatedIssues);
 
     const updatedTasks = tasks.map((t) => {
-      const isTarget = t.id === issue.task_id || (t.id === "task-2" && (issue.task_id === "task-2" || issue.task_id === "t2222222-1111-1111-1111-111111111111"));
-      if (isTarget) {
+      if (t.id === issue.task_id) {
         const remainingUnresolved = updatedIssues.filter(
-          (i) => (i.task_id === t.id || (t.id === "task-2" && (i.task_id === "task-2" || i.task_id === "t2222222-1111-1111-1111-111111111111"))) && !i.is_resolved
+          (i) => i.task_id === t.id && !i.is_resolved
         ).length;
         return { ...t, unresolved_issues_count: remainingUnresolved };
       }
@@ -1557,6 +1211,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedLogs = [newLog, ...activityLogs];
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, updatedIssues, updatedLogs);
+
+    // Auto-resolve / mark as read any blocker notification for this task
+    const updatedNotifs = notifications.map((n) =>
+      n.task_id === issue.task_id && n.type === "issue_logged" ? { ...n, is_read: true } : n
+    );
+    setNotifications(updatedNotifs);
+    try {
+      localStorage.setItem("taskflow_notifications", JSON.stringify(updatedNotifs));
+    } catch {}
 
     // Persist issue resolution to Supabase Cloud
     SupabaseSyncService.saveIssue({

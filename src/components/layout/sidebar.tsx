@@ -61,8 +61,9 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
     }
   };
 
-  const unresolvedIssuesCount = issues.filter((i) => !i.is_resolved).length;
-  const unreadNotifsCount = notifications.filter((n) => !n.is_read).length;
+  const activeTaskIds = new Set(tasks.map((t) => t.id));
+  const unresolvedIssuesCount = issues.filter((i) => !i.is_resolved && activeTaskIds.has(i.task_id)).length;
+  const unreadNotifsCount = notifications.filter((n) => !n.is_read && (!n.task_id || activeTaskIds.has(n.task_id))).length;
   const permitTasksCount = tasks.filter((t) => t.category === "permit").length;
 
   const isAdmin = currentUser?.role === "admin";

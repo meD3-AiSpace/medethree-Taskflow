@@ -129,7 +129,7 @@ function TasksListContent() {
       if (!isOverdue) return false;
     } else if (selectedSpecialFilter === "issues") {
       const activeUnresolvedIssues = issues.filter(
-        (i) => (i.task_id === t.id || (t.id === "task-2" && (i.task_id === "task-2" || i.task_id === "t2222222-1111-1111-1111-111111111111"))) && !i.is_resolved
+        (i) => i.task_id === t.id && !i.is_resolved
       );
       if (activeUnresolvedIssues.length === 0) return false;
     } else if (selectedSpecialFilter === "at_risk") {
@@ -406,7 +406,7 @@ function TasksListContent() {
                     new Date(task.deadline).getTime() < Date.now() &&
                     task.status !== "completed";
                   const taskIssues = issues.filter(
-                    (i) => i.task_id === task.id || (task.id === "task-2" && (i.task_id === "task-2" || i.task_id === "t2222222-1111-1111-1111-111111111111"))
+                    (i) => i.task_id === task.id
                   );
                   const activeUnresolvedIssues = taskIssues.filter((i) => !i.is_resolved);
                   const resolvedIssues = taskIssues.filter((i) => i.is_resolved);

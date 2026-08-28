@@ -32,7 +32,7 @@ export function QuickResolveModal({ task, open, onOpenChange }: QuickResolveModa
 
   // Find active unresolved issues for this task
   const activeIssues = issues.filter(
-    (i) => (i.task_id === task.id || (task.id === "task-2" && i.task_id === "task-2")) && !i.is_resolved
+    (i) => i.task_id === task.id && !i.is_resolved
   );
 
   const targetIssue = activeIssues[0];
