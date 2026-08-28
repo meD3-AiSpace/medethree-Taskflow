@@ -688,6 +688,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
+      // Restore saved user session
       const savedUserStr = localStorage.getItem("taskflow_current_user");
       if (savedUserStr) {
         if (savedUserStr.startsWith("{")) {
@@ -696,6 +697,24 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         } else {
           const found = defaultUsers.find((u) => u.id === savedUserStr);
           if (found) setCurrentUser(found);
+        }
+      }
+
+      // Restore saved issues from localStorage (including resolved status and resolver user info)
+      const savedIssuesStr = localStorage.getItem("taskflow_issues");
+      if (savedIssuesStr) {
+        const parsedIssues = JSON.parse(savedIssuesStr);
+        if (Array.isArray(parsedIssues) && parsedIssues.length > 0) {
+          setIssues(parsedIssues);
+        }
+      }
+
+      // Restore saved tasks from localStorage
+      const savedTasksStr = localStorage.getItem("taskflow_tasks");
+      if (savedTasksStr) {
+        const parsedTasks = JSON.parse(savedTasksStr);
+        if (Array.isArray(parsedTasks) && parsedTasks.length > 0) {
+          setTasks(parsedTasks);
         }
       }
     } catch {}
@@ -852,17 +871,36 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     if (cloudData.comments && cloudData.comments.length > 0) setComments(cloudData.comments);
     if (cloudData.attachments && cloudData.attachments.length > 0) setAttachments(cloudData.attachments);
+    // Robust Issue State Sync: preserve local resolution status and resolver details
+    let localIssues: TaskIssue[] = [];
+    try {
+      const saved = localStorage.getItem("taskflow_issues");
+      if (saved) localIssues = JSON.parse(saved);
+    } catch {}
+
+    const issueMap = new Map<string, TaskIssue>();
+    // 1. Initial issues fallback
+    initialIssues.forEach((i) => issueMap.set(i.id, i));
+    // 2. Override with local issues (which contain resolved status & resolver info)
+    localIssues.forEach((i) => issueMap.set(i.id, i));
+    // 3. Override with cloud issues if provided
     if (cloudData.issues && cloudData.issues.length > 0) {
-      const mergedIssues: TaskIssue[] = [...cloudData.issues];
-      initialIssues.forEach((ii) => {
-        if (!mergedIssues.some((mi) => mi.id === ii.id)) {
-          mergedIssues.push(ii);
-        }
+      cloudData.issues.forEach((ci: any) => {
+        const existing = issueMap.get(ci.id);
+        issueMap.set(ci.id, {
+          ...existing,
+          ...ci,
+          // Preserve resolved details if marked locally
+          is_resolved: ci.is_resolved ?? existing?.is_resolved ?? false,
+          resolved_by: ci.resolved_by ?? existing?.resolved_by,
+          resolved_at: ci.resolved_at ?? existing?.resolved_at,
+          resolution_description: ci.resolution_description ?? existing?.resolution_description,
+          resolved_user: ci.resolved_user ?? existing?.resolved_user,
+        });
       });
-      setIssues(mergedIssues);
-    } else {
-      setIssues(initialIssues);
     }
+    const finalIssues = Array.from(issueMap.values());
+    setIssues(finalIssues);
     if (cloudData.timeEntries && cloudData.timeEntries.length > 0) setTimeEntries(cloudData.timeEntries);
     if (cloudData.activityLogs && cloudData.activityLogs.length > 0) setActivityLogs(cloudData.activityLogs);
   };

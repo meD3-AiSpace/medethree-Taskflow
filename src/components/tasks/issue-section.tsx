@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertCircle, CheckCircle2, Clock, Plus, ShieldAlert, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Plus, ShieldAlert, Sparkles, UserCheck, ShieldCheck, User, Wrench, Calendar, CheckCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatDateTime } from "@/lib/utils";
 import { translateText } from "@/lib/i18n/auto-translate";
 
@@ -105,58 +107,52 @@ export function IssueSection({ taskId }: IssueSectionProps) {
           taskIssues.map((issue) => {
             const displayDesc = lang === "en" && issue.issue_description_en ? issue.issue_description_en : issue.issue_description;
             const displayRes = lang === "en" && issue.resolution_description_en ? issue.resolution_description_en : issue.resolution_description;
+            const resolverName = issue.resolved_user?.full_name || (issue.resolved_by === currentUser.id ? currentUser.full_name : "ผู้ดูแลระบบ (Admin)");
+            const resolverRole = issue.resolved_user?.role || (issue.resolved_by === currentUser.id ? currentUser.role : "admin");
 
             return (
               <div
                 key={issue.id}
-                className={`p-4 rounded-xl border transition-all ${
+                className={`p-4 rounded-xl border transition-all space-y-3 ${
                   issue.is_resolved
-                    ? "bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/60"
-                    : "bg-rose-50/50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/80"
+                    ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-900/60 shadow-xs"
+                    : "bg-rose-50/60 dark:bg-rose-950/30 border-rose-300 dark:border-rose-900/80 shadow-sm"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-2.5 flex-1 min-w-0">
                     {issue.is_resolved ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="h-7 w-7 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckCircle2 className="h-4 w-4" />
+                      </div>
                     ) : (
-                      <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div className="h-7 w-7 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 flex items-center justify-center shrink-0 mt-0.5 animate-pulse">
+                        <AlertCircle className="h-4 w-4" />
+                      </div>
                     )}
-                    <div>
-                      {/* Status Badge */}
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            issue.is_resolved
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                              : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 animate-pulse"
-                          }`}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {/* Status & Reporter Header */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge
+                          variant={issue.is_resolved ? "success" : "destructive"}
+                          className="text-[10px] font-bold px-2 py-0.5"
                         >
-                          {issue.is_resolved ? t("statusResolved") : t("statusUnresolved")}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">
-                          {t("raisedAt")} {formatDateTime(issue.raised_at, lang)} {t("byUser")}{" "}
-                          <strong className="text-foreground">{issue.raised_user?.full_name || (lang === "th" ? "สมาชิกในทีม" : "Team member")}</strong>
+                          {issue.is_resolved
+                            ? (lang === "th" ? "✅ ปลดบล็อกสำเร็จ (Resolved)" : "✅ Resolved")
+                            : (lang === "th" ? "🚨 ปัญหาติดขัด (Active Blocker)" : "🚨 Active Blocker")}
+                        </Badge>
+                        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                          <span>{t("raisedAt")} {formatDateTime(issue.raised_at, lang)}</span>
+                          <span>•</span>
+                          <span>{t("byUser")}</span>
+                          <strong className="text-foreground">{issue.raised_user?.full_name || (lang === "th" ? "ผู้รายงาน" : "Reporter")}</strong>
                         </span>
                       </div>
 
                       {/* Problem Description */}
-                      <p className="text-xs font-semibold text-foreground leading-relaxed">
+                      <p className="text-xs font-semibold text-foreground leading-relaxed pt-0.5">
                         {displayDesc}
                       </p>
-
-                      {/* Resolution if resolved */}
-                      {issue.is_resolved && (
-                        <div className="mt-2.5 p-2.5 rounded-lg bg-background/80 border border-emerald-200 dark:border-emerald-900 text-xs">
-                          <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold mb-0.5">
-                            {t("resolutionMethod")}
-                          </div>
-                          <p className="text-muted-foreground">{displayRes}</p>
-                          <div className="text-[10px] text-muted-foreground/70 mt-1">
-                            {t("resolvedBy")} <strong>{issue.resolved_user?.full_name || currentUser.full_name}</strong> ({formatDateTime(issue.resolved_at, lang)})
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -168,12 +164,50 @@ export function IssueSection({ taskId }: IssueSectionProps) {
                         setSelectedIssueId(issue.id);
                         setShowResolveModal(true);
                       }}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 shrink-0"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 px-3 gap-1 shrink-0 shadow-sm cursor-pointer"
                     >
-                      {t("btnMarkResolved")}
+                      <CheckCheck className="h-3.5 w-3.5" />
+                      <span>{lang === "th" ? "บันทึกการแก้ปัญหา" : "Resolve Issue"}</span>
                     </Button>
                   )}
                 </div>
+
+                {/* Provenance Box: Who resolved it, when, and resolution details */}
+                {issue.is_resolved && (
+                  <div className="p-3.5 rounded-xl bg-background/90 border border-emerald-200 dark:border-emerald-900/80 shadow-xs space-y-2 animate-in fade-in">
+                    <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">
+                          {resolverName.trim().charAt(0).toUpperCase()}
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-muted-foreground text-[10px] block">{lang === "th" ? "ผู้ดำเนินการแก้ไขปัญหา:" : "Resolved By:"}</span>
+                          <strong className="text-foreground font-bold">{resolverName}</strong>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[9px] uppercase font-bold border-emerald-400 text-emerald-800 dark:text-emerald-300">
+                          ROLE: {resolverRole}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatDateTime(issue.resolved_at || new Date().toISOString(), lang)}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 pt-0.5">
+                      <span className="text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-1">
+                        <Wrench className="h-3 w-3" />
+                        <span>{lang === "th" ? "แนวทางและวิธีการแก้ไขปัญหา (Resolution Method):" : "Resolution Method & Action Taken:"}</span>
+                      </span>
+                      <p className="text-xs text-foreground/90 leading-relaxed font-medium bg-emerald-50/40 dark:bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-200/60 dark:border-emerald-900/40">
+                        {displayRes || (lang === "th" ? "ได้รับการแก้ไขและตรวจสอบความถูกต้องเรียบร้อยแล้ว" : "Issue inspected and resolved.")}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })
