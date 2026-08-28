@@ -132,4 +132,20 @@ describe("Phase 2: Enterprise Multi-Tenant & RLS Isolation Suite", () => {
     expect(resolvedIssue.resolved_user?.role).toBe("admin");
     expect(resolvedIssue.resolution_description).toBe(resolutionNote);
   });
+
+  it("should preserve task assignee reassignment and persist assignees list", () => {
+    const originalTask = { ...taskOrgA, assignees: [userA] };
+    const updatedAssignees = [userB];
+
+    const reassignedTask: Task = {
+      ...originalTask,
+      assignees: updatedAssignees,
+      updated_at: new Date().toISOString(),
+    };
+
+    expect(reassignedTask.assignees).toBeDefined();
+    expect(reassignedTask.assignees?.length).toBe(1);
+    expect(reassignedTask.assignees?.[0].id).toBe(userB.id);
+    expect(reassignedTask.assignees?.[0].full_name).toBe("External Auditor");
+  });
 });

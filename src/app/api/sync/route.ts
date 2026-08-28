@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
       permitsRes,
       timeRes,
       logsRes,
+      assigneesRes,
     ] = await Promise.all([
       supabase.from("tasks").select("*").eq("org_id", targetOrgId).order("created_at", { ascending: false }),
       supabase.from("projects").select("*").eq("org_id", targetOrgId),
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
       supabase.from("permit_details").select("*"),
       supabase.from("time_entries").select("*").order("created_at", { ascending: false }),
       supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("task_assignees").select("*"),
     ]);
 
     const orgTasks = tasksRes.data || [];
@@ -61,6 +63,7 @@ export async function GET(request: NextRequest) {
     const scopedPermits = (permitsRes.data || []).filter((p: any) => orgTaskIds.has(p.task_id));
     const scopedTimeEntries = (timeRes.data || []).filter((te: any) => orgTaskIds.has(te.task_id));
     const scopedActivityLogs = (logsRes.data || []).filter((l: any) => !l.task_id || orgTaskIds.has(l.task_id));
+    const scopedAssignees = (assigneesRes.data || []).filter((a: any) => orgTaskIds.has(a.task_id));
 
     return NextResponse.json({
       success: true,
@@ -76,6 +79,7 @@ export async function GET(request: NextRequest) {
         permits: scopedPermits,
         timeEntries: scopedTimeEntries,
         activityLogs: scopedActivityLogs,
+        assignees: scopedAssignees,
       },
     });
   } catch (err: unknown) {
@@ -124,6 +128,21 @@ export async function POST(request: NextRequest) {
 
         const { error: taskErr } = await supabase.from("tasks").upsert(dbTask);
         if (taskErr) throw taskErr;
+
+        if (task.assignees !== undefined && task.id) {
+          try {
+            await supabase.from("task_assignees").delete().eq("task_id", task.id);
+            if (Array.isArray(task.assignees) && task.assignees.length > 0) {
+              const assigneesToInsert = task.assignees.map((a: any) => ({
+                task_id: task.id,
+                user_id: typeof a === "object" ? a.id : a,
+              }));
+              await supabase.from("task_assignees").insert(assigneesToInsert);
+            }
+          } catch (assigneeErr) {
+            console.warn("[Save Task Assignees Error]:", assigneeErr);
+          }
+        }
 
         if (permitDetails && task.id) {
           await supabase.from("permit_details").upsert({

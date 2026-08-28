@@ -762,6 +762,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (!cloudData) return;
 
     if (cloudData.tasks && Array.isArray(cloudData.tasks)) {
+      let localTasks: Task[] = [];
+      try {
+        const saved = localStorage.getItem("taskflow_tasks");
+        if (saved) localTasks = JSON.parse(saved);
+      } catch {}
+
       const mappedTasks: Task[] = cloudData.tasks.map((dbTask: any) => {
         const project = cloudData.projects?.find((p: any) => p.id === dbTask.project_id) || defaultProjects[0];
         const creator = cloudData.users?.find((u: any) => u.id === dbTask.created_by) || defaultUsers[0];
@@ -769,10 +775,18 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         const taskComments = (cloudData.comments || []).filter((c: any) => c.task_id === dbTask.id);
         const taskIssues = (cloudData.issues || []).filter((i: any) => i.task_id === dbTask.id && !i.is_resolved);
 
-        const existingTask = tasks.find((t) => t.id === dbTask.id);
-        const taskAssignees = (existingTask?.assignees && existingTask.assignees.length > 0)
-          ? existingTask.assignees
-          : (creator ? [creator] : []);
+        const cloudTaskAssignees = (cloudData.assignees || [])
+          .filter((a: any) => a.task_id === dbTask.id)
+          .map((a: any) => (cloudData.users || users).find((u: any) => u.id === a.user_id))
+          .filter(Boolean);
+
+        const localTask = localTasks.find((t) => t.id === dbTask.id) || tasks.find((t) => t.id === dbTask.id);
+        const taskAssignees = cloudTaskAssignees.length > 0
+          ? cloudTaskAssignees
+          : (localTask?.assignees && localTask.assignees.length > 0)
+            ? localTask.assignees
+            : (creator ? [creator] : []);
+
         const taskAtts = (cloudData.attachments || []).filter((a: any) => a.task_id === dbTask.id);
 
         return {
@@ -780,16 +794,16 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
           project,
           creator,
           assignees: taskAssignees,
-          attachments: taskAtts.length > 0 ? taskAtts : (existingTask?.attachments || []),
-          permit_details: permit || existingTask?.permit_details || undefined,
+          attachments: taskAtts.length > 0 ? taskAtts : (localTask?.attachments || []),
+          permit_details: permit || localTask?.permit_details || undefined,
           comments_count: taskComments.length,
-          unresolved_issues_count: taskIssues.length || existingTask?.unresolved_issues_count || 0,
+          unresolved_issues_count: taskIssues.length || localTask?.unresolved_issues_count || 0,
         };
       });
 
-      // Only if tasks exist in cloud, update tasks state
       if (mappedTasks.length > 0) {
         setTasks(mappedTasks);
+        try { localStorage.setItem("taskflow_tasks", JSON.stringify(mappedTasks)); } catch {}
       }
     }
 
@@ -1283,6 +1297,19 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         action: "priority_changed",
         old_value: task.priority,
         new_value: updates.priority,
+        created_at: new Date().toISOString(),
+        user: currentUser,
+      });
+    }
+
+    if (updates.assignees) {
+      const assigneeNames = updates.assignees.map((a) => a.full_name).join(", ");
+      newLogs.push({
+        id: `log-${Date.now()}-as`,
+        task_id: taskId,
+        user_id: currentUser.id,
+        action: "task_assigned",
+        new_value: `เปลี่ยนผู้รับผิดชอบเป็น: ${assigneeNames}`,
         created_at: new Date().toISOString(),
         user: currentUser,
       });
