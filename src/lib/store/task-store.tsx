@@ -764,9 +764,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
           attachments: taskAtts.length > 0 ? taskAtts : (existingTask?.attachments || []),
           permit_details: permit || existingTask?.permit_details || undefined,
           comments_count: taskComments.length,
-          unresolved_issues_count: taskIssues.length,
+          unresolved_issues_count: taskIssues.length || existingTask?.unresolved_issues_count || 0,
         };
       });
+
+      // Merge initial sample tasks (including task-2 with MEP clash blocker) so sample tasks are always intact
+      initialTasks.forEach((it) => {
+        if (!mappedTasks.some((mt) => mt.id === it.id)) {
+          mappedTasks.push(it);
+        }
+      });
+
       setTasks(mappedTasks);
     }
 
@@ -844,7 +852,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     if (cloudData.comments && cloudData.comments.length > 0) setComments(cloudData.comments);
     if (cloudData.attachments && cloudData.attachments.length > 0) setAttachments(cloudData.attachments);
-    if (cloudData.issues && cloudData.issues.length > 0) setIssues(cloudData.issues);
+    if (cloudData.issues && cloudData.issues.length > 0) {
+      const mergedIssues: TaskIssue[] = [...cloudData.issues];
+      initialIssues.forEach((ii) => {
+        if (!mergedIssues.some((mi) => mi.id === ii.id)) {
+          mergedIssues.push(ii);
+        }
+      });
+      setIssues(mergedIssues);
+    } else {
+      setIssues(initialIssues);
+    }
     if (cloudData.timeEntries && cloudData.timeEntries.length > 0) setTimeEntries(cloudData.timeEntries);
     if (cloudData.activityLogs && cloudData.activityLogs.length > 0) setActivityLogs(cloudData.activityLogs);
   };
