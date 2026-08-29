@@ -266,6 +266,124 @@ function TasksListContent() {
         </div>
       )}
 
+      {/* ⚡ One-Tap Fast Filter Chips (Mobile & Desktop Responsive) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+        <button
+          type="button"
+          onClick={() => {
+            clearAllFilters();
+            setOnlyMyTasks(false);
+          }}
+          className={cn(
+            "px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all border text-xs cursor-pointer flex items-center gap-1.5",
+            !hasActiveFilter && !onlyMyTasks
+              ? "bg-foreground text-background border-foreground shadow-xs"
+              : "bg-muted/60 text-muted-foreground hover:text-foreground border-border/80"
+          )}
+        >
+          <span>{lang === "th" ? "ทั้งหมด" : "All"}</span>
+          <span className="text-[10px] opacity-75 font-mono">({tasks.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setOnlyMyTasks(!onlyMyTasks)}
+          className={cn(
+            "px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all border text-xs cursor-pointer flex items-center gap-1.5",
+            onlyMyTasks
+              ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+              : "bg-muted/60 text-muted-foreground hover:text-foreground border-border/80"
+          )}
+        >
+          <span>🎯 {lang === "th" ? "งานของฉัน" : "My Tasks"}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (selectedSpecialFilter === "issues") {
+              setSelectedSpecialFilter("all");
+            } else {
+              setSelectedSpecialFilter("issues");
+              setSelectedStatus("all");
+            }
+          }}
+          className={cn(
+            "px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all border text-xs cursor-pointer flex items-center gap-1.5",
+            selectedSpecialFilter === "issues"
+              ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+              : "bg-rose-50/80 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900"
+          )}
+        >
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>{lang === "th" ? "🚨 ติดปัญหา" : "Blockers"}</span>
+          {issues.filter((i) => !i.is_resolved).length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100 text-[10px] font-bold">
+              {issues.filter((i) => !i.is_resolved).length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (selectedPriority === "urgent") {
+              setSelectedPriority("all");
+            } else {
+              setSelectedPriority("urgent");
+            }
+          }}
+          className={cn(
+            "px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all border text-xs cursor-pointer flex items-center gap-1.5",
+            selectedPriority === "urgent"
+              ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+              : "bg-amber-50/80 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-900"
+          )}
+        >
+          <span>🔥 {lang === "th" ? "ด่วนที่สุด" : "Urgent"}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (selectedSpecialFilter === "overdue") {
+              setSelectedSpecialFilter("all");
+            } else {
+              setSelectedSpecialFilter("overdue");
+              setSelectedStatus("all");
+            }
+          }}
+          className={cn(
+            "px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all border text-xs cursor-pointer flex items-center gap-1.5",
+            selectedSpecialFilter === "overdue"
+              ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+              : "bg-muted/60 text-muted-foreground hover:text-foreground border-border/80"
+          )}
+        >
+          <span>⏳ {lang === "th" ? "เกินกำหนด" : "Overdue"}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (selectedStatus === "review") {
+              setSelectedStatus("all");
+            } else {
+              setSelectedStatus("review");
+              setSelectedSpecialFilter("all");
+            }
+          }}
+          className={cn(
+            "px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all border text-xs cursor-pointer flex items-center gap-1.5",
+            selectedStatus === "review"
+              ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+              : "bg-muted/60 text-muted-foreground hover:text-foreground border-border/80"
+          )}
+        >
+          <span>🔍 {lang === "th" ? "รอตรวจ (Review)" : "Review"}</span>
+        </button>
+      </div>
+
       {/* Filter Bar */}
       <div className="p-4 rounded-xl border bg-card shadow-sm space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">

@@ -37,7 +37,18 @@ export default function LoginPage() {
     const cleanEmail = email.trim().toLowerCase();
 
     // 1. Strict Whitelist Check: Must match users registered in Settings database by Admin
-    const preRegisteredUser = users.find(
+    let availableUsers = users;
+    try {
+      const savedUsersStr = localStorage.getItem("taskflow_users");
+      if (savedUsersStr) {
+        const parsed = JSON.parse(savedUsersStr);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          availableUsers = parsed;
+        }
+      }
+    } catch {}
+
+    const preRegisteredUser = availableUsers.find(
       (u) => u.email.trim().toLowerCase() === cleanEmail
     );
 
@@ -47,6 +58,16 @@ export default function LoginPage() {
         lang === "th"
           ? `🚫 ไม่พบอีเมล "${email}" ในฐานข้อมูลองค์กร: บัญชีผู้ใช้ต้องได้รับการเพิ่มชื่อและกำหนดสิทธิ์โดย Admin ในหน้า Settings ก่อนเข้าใช้งาน กรุณาติดต่อ Admin หรือฝ่ายบุคคล`
           : `🚫 Email "${email}" is not registered in the organization database. Please contact your Admin to assign role & access permissions.`
+      );
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      setLoading(false);
+      setErrorMessage(
+        lang === "th"
+          ? "รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร"
+          : "Password must be at least 6 characters"
       );
       return;
     }
@@ -62,13 +83,19 @@ export default function LoginPage() {
           options: {
             data: {
               full_name: preRegisteredUser.full_name,
-              org_id: "11111111-1111-1111-1111-111111111111", // Baan Suay Default Org
+              org_id: preRegisteredUser.org_id || "11111111-1111-1111-1111-111111111111",
             },
           },
         });
 
         if (error) {
-          console.warn("[Supabase Auth SignUp Notice]:", error.message);
+          setErrorMessage(
+            lang === "th"
+              ? `ไม่สามารถลงทะเบียนได้: ${error.message}`
+              : `Sign up failed: ${error.message}`
+          );
+          setLoading(false);
+          return;
         }
 
         setSuccessMessage(
@@ -82,17 +109,25 @@ export default function LoginPage() {
           router.replace("/dashboard");
         }, 600);
       } else {
-        // Sign In
-        try {
-          const { error } = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password,
-          });
-          if (error) {
-            console.warn("[Supabase Auth SignIn Notice]:", error.message);
-          }
-        } catch {
-          // fallback to local verified user
+        // Sign In with Supabase Auth
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (error) {
+          const isInvalidCreds = error.message.toLowerCase().includes("invalid login credentials");
+          setErrorMessage(
+            isInvalidCreds
+              ? lang === "th"
+                ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง (หากยังไม่เคยตั้งรหัสผ่าน กรุณากด 'เปิดสิทธิ์ครั้งแรก (Sign Up)')"
+                : "Invalid email or password. If you haven't created a password yet, please click 'First time sign in? Sign Up'."
+              : lang === "th"
+              ? `เข้าสู่ระบบไม่สำเร็จ: ${error.message}`
+              : `Sign in failed: ${error.message}`
+          );
+          setLoading(false);
+          return;
         }
 
         setSuccessMessage(
@@ -108,9 +143,11 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error("[Login Auth Error]:", err);
-      // If whitelisted, grant access
-      login(preRegisteredUser);
-      router.replace("/dashboard");
+      setErrorMessage(
+        lang === "th"
+          ? `เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์: ${err.message || "กรุณาลองใหม่อีกครั้ง"}`
+          : `Authentication error: ${err.message || "Please try again"}`
+      );
     } finally {
       setLoading(false);
     }

@@ -185,7 +185,7 @@ export default function SettingsPage() {
 
     (activityLogs || []).forEach((log) => {
       actions += 1;
-      const uId = log.user_id;
+      const uId = log.user_id || log.user?.id;
       if (!uId) return;
       if (!statsMap[uId]) {
         statsMap[uId] = { loginCount: 0, actionCount: 0, lastActive: null, lastAction: "-" };
@@ -195,7 +195,7 @@ export default function SettingsPage() {
         logins += 1;
         statsMap[uId].loginCount += 1;
       }
-      if (!statsMap[uId].lastActive || new Date(log.created_at) > new Date(statsMap[uId].lastActive!)) {
+      if (!statsMap[uId].lastActive || new Date(log.created_at).getTime() >= new Date(statsMap[uId].lastActive!).getTime()) {
         statsMap[uId].lastActive = log.created_at;
         statsMap[uId].lastAction = log.new_value || log.action;
       }

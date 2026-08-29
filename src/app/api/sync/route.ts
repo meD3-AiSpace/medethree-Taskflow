@@ -6,9 +6,30 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIp } from "@/lib/security/rate-limiter";
 
 export async function GET(request: NextRequest) {
   try {
+    // 1. Rate Limiting: 60 requests / min / IP
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`sync_get:${clientIp}`, 60, 60);
+
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Too Many Requests. Please slow down.",
+          retryAfter: rateCheck.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateCheck.retryAfterSeconds || 60),
+          },
+        }
+      );
+    }
+
     let supabase = null;
     try {
       supabase = createAdminClient();
@@ -90,8 +111,32 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. Rate Limiting: 120 mutations / min / IP
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`sync_post:${clientIp}`, 120, 60);
+
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Too Many Requests. Please slow down.",
+          retryAfter: rateCheck.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateCheck.retryAfterSeconds || 60),
+          },
+        }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const { action, payload } = body;
+
+    if (!action || !payload) {
+      return NextResponse.json({ success: false, error: "Missing action or payload" }, { status: 400 });
+    }
 
     let supabase = null;
     try {
@@ -164,17 +209,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, message: "Task deleted from cloud" });
       }
 
-      case "save_comment": {
-        const { comment } = payload;
-        await supabase.from("comments").insert({
-          id: comment.id,
-          task_id: comment.task_id,
-          user_id: comment.user_id,
-          content: comment.content,
-        });
-        return NextResponse.json({ success: true, message: "Comment saved to cloud" });
-      }
-
       case "save_issue": {
         const { issue } = payload;
         await supabase.from("task_issues").upsert({
@@ -204,19 +238,32 @@ export async function POST(request: NextRequest) {
 
       case "save_user": {
         const { user } = payload;
+        if (!user || !user.id) {
+          return NextResponse.json({ success: false, error: "Missing user.id" }, { status: 400 });
+        }
+
+        let existingUser: any = null;
+        try {
+          const { data } = await supabase.from("users").select("*").eq("id", user.id).maybeSingle();
+          existingUser = data;
+        } catch {}
+
         const dbUser = {
           id: user.id,
-          org_id: user.org_id || "11111111-1111-1111-1111-111111111111",
-          full_name: user.full_name,
-          email: user.email,
-          role: user.role || "member",
-          team_id: user.team_id || null,
-          phone_number: user.phone_number || null,
-          line_user_id: user.line_user_id || null,
-          created_at: user.created_at || new Date().toISOString(),
+          org_id: user.org_id || existingUser?.org_id || "11111111-1111-1111-1111-111111111111",
+          full_name: user.full_name || existingUser?.full_name || "ผู้ใช้งาน",
+          email: user.email || existingUser?.email || "user@medtree.com",
+          role: user.role || existingUser?.role || "member",
+          team_id: user.team_id !== undefined ? user.team_id : existingUser?.team_id || null,
+          phone_number: user.phone_number !== undefined ? user.phone_number : existingUser?.phone_number || null,
+          line_user_id: user.line_user_id !== undefined ? user.line_user_id : existingUser?.line_user_id || null,
+          created_at: user.created_at || existingUser?.created_at || new Date().toISOString(),
         };
         const { error: uErr } = await supabase.from("users").upsert(dbUser);
-        if (uErr) throw uErr;
+        if (uErr) {
+          console.error("[Save User Upsert Error]:", uErr);
+          throw uErr;
+        }
         return NextResponse.json({ success: true, message: "User saved to cloud" });
       }
 
@@ -229,11 +276,21 @@ export async function POST(request: NextRequest) {
 
       case "save_team": {
         const { team } = payload;
+        if (!team || !team.id) {
+          return NextResponse.json({ success: false, error: "Missing team.id" }, { status: 400 });
+        }
+
+        let existingTeam: any = null;
+        try {
+          const { data } = await supabase.from("teams").select("*").eq("id", team.id).maybeSingle();
+          existingTeam = data;
+        } catch {}
+
         const dbTeam = {
           id: team.id,
-          org_id: team.org_id || "11111111-1111-1111-1111-111111111111",
-          name: team.name,
-          created_at: team.created_at || new Date().toISOString(),
+          org_id: team.org_id || existingTeam?.org_id || "11111111-1111-1111-1111-111111111111",
+          name: team.name || existingTeam?.name || "ทีมงาน",
+          created_at: team.created_at || existingTeam?.created_at || new Date().toISOString(),
         };
         const { error: tErr } = await supabase.from("teams").upsert(dbTeam);
         if (tErr) throw tErr;

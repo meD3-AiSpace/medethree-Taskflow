@@ -418,19 +418,64 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      // Restore saved user session
+      // 1. Restore saved users list first
+      let activeUsersList: UserProfile[] = defaultUsers;
+      const savedUsersStr = localStorage.getItem("taskflow_users");
+      if (savedUsersStr) {
+        try {
+          const parsedUsers = JSON.parse(savedUsersStr);
+          if (Array.isArray(parsedUsers) && parsedUsers.length > 0) {
+            activeUsersList = parsedUsers;
+            setUsers(parsedUsers);
+          }
+        } catch {}
+      } else {
+        try {
+          localStorage.setItem("taskflow_users", JSON.stringify(defaultUsers));
+        } catch {}
+      }
+
+      // 2. Restore saved user session
       const savedUserStr = localStorage.getItem("taskflow_current_user");
+      let activeUser: UserProfile | null = null;
       if (savedUserStr) {
         if (savedUserStr.startsWith("{")) {
           const parsed = JSON.parse(savedUserStr);
-          if (parsed && parsed.id) setCurrentUser(parsed);
+          if (parsed && parsed.id) {
+            const matchedInUsers = activeUsersList.find((u) => u.id === parsed.id) || parsed;
+            activeUser = matchedInUsers;
+            setCurrentUser(matchedInUsers);
+          }
         } else {
-          const found = defaultUsers.find((u) => u.id === savedUserStr);
-          if (found) setCurrentUser(found);
+          const found = activeUsersList.find((u) => u.id === savedUserStr) || defaultUsers.find((u) => u.id === savedUserStr);
+          if (found) {
+            activeUser = found;
+            setCurrentUser(found);
+          }
+        }
+      } else if (activeUsersList.length > 0) {
+        setCurrentUser(activeUsersList[0]);
+      }
+
+      // 3. Restore saved teams
+      const savedTeamsStr = localStorage.getItem("taskflow_teams");
+      if (savedTeamsStr) {
+        const parsedTeams = JSON.parse(savedTeamsStr);
+        if (Array.isArray(parsedTeams) && parsedTeams.length > 0) {
+          setTeams(parsedTeams);
         }
       }
 
-      // Restore saved issues from localStorage (including resolved status and resolver user info)
+      // 4. Restore saved projects
+      const savedProjectsStr = localStorage.getItem("taskflow_projects");
+      if (savedProjectsStr) {
+        const parsedProjects = JSON.parse(savedProjectsStr);
+        if (Array.isArray(parsedProjects) && parsedProjects.length > 0) {
+          setProjects(parsedProjects);
+        }
+      }
+
+      // 5. Restore saved issues
       const savedIssuesStr = localStorage.getItem("taskflow_issues");
       if (savedIssuesStr) {
         const parsedIssues = JSON.parse(savedIssuesStr);
@@ -439,7 +484,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Restore saved tasks from localStorage
+      // 6. Restore saved tasks
       const savedTasksStr = localStorage.getItem("taskflow_tasks");
       if (savedTasksStr) {
         const parsedTasks = JSON.parse(savedTasksStr);
@@ -447,7 +492,54 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
           setTasks(parsedTasks);
         }
       }
-    } catch {}
+
+      // 7. Restore saved activity logs (for audit statistics & telemetry)
+      const savedLogsStr = localStorage.getItem("taskflow_logs");
+      if (savedLogsStr) {
+        const parsedLogs = JSON.parse(savedLogsStr);
+        if (Array.isArray(parsedLogs) && parsedLogs.length > 0) {
+          setActivityLogs(parsedLogs);
+        }
+      }
+
+      // 8. Restore saved comments
+      const savedCommentsStr = localStorage.getItem("taskflow_comments");
+      if (savedCommentsStr) {
+        const parsedComments = JSON.parse(savedCommentsStr);
+        if (Array.isArray(parsedComments) && parsedComments.length > 0) {
+          setComments(parsedComments);
+        }
+      }
+
+      // 9. Restore saved attachments
+      const savedAttsStr = localStorage.getItem("taskflow_attachments");
+      if (savedAttsStr) {
+        const parsedAtts = JSON.parse(savedAttsStr);
+        if (Array.isArray(parsedAtts) && parsedAtts.length > 0) {
+          setAttachments(parsedAtts);
+        }
+      }
+
+      // 10. Restore saved time entries
+      const savedTimeStr = localStorage.getItem("taskflow_time_entries");
+      if (savedTimeStr) {
+        const parsedTime = JSON.parse(savedTimeStr);
+        if (Array.isArray(parsedTime) && parsedTime.length > 0) {
+          setTimeEntries(parsedTime);
+        }
+      }
+
+      // 11. Restore saved notifications
+      const savedNotifsStr = localStorage.getItem("taskflow_notifications");
+      if (savedNotifsStr) {
+        const parsedNotifs = JSON.parse(savedNotifsStr);
+        if (Array.isArray(parsedNotifs) && parsedNotifs.length > 0) {
+          setNotifications(parsedNotifs);
+        }
+      }
+    } catch (err) {
+      console.warn("[TaskProvider Mount Restore Error]:", err);
+    }
     setIsAuthInitialized(true);
   }, []);
 
@@ -465,9 +557,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     };
     setActivityLogs((prev) => [newLog, ...prev]);
     try {
-      const existingLogs = JSON.parse(localStorage.getItem("taskflow_logs") || "[]");
-      localStorage.setItem("taskflow_logs", JSON.stringify([newLog, ...existingLogs.slice(0, 100)]));
+      const existingLogs: ActivityLog[] = JSON.parse(localStorage.getItem("taskflow_logs") || "[]");
+      const updatedLogs = [newLog, ...existingLogs.filter(l => l.id !== newLog.id)].slice(0, 150);
+      localStorage.setItem("taskflow_logs", JSON.stringify(updatedLogs));
     } catch {}
+    // Also push to cloud
+    SupabaseSyncService.saveActivityLog(newLog);
   };
 
   const login = (user: UserProfile) => {
@@ -545,6 +640,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         created_at: ct.created_at || new Date().toISOString(),
       }));
       setTeams(mergedTeams);
+      saveTeamsState(mergedTeams);
     }
 
     if (cloudData.projects && Array.isArray(cloudData.projects)) {
@@ -563,31 +659,87 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (cloudData.users && Array.isArray(cloudData.users) && cloudData.users.length > 0) {
-      const mergedUsers: UserProfile[] = cloudData.users.map((cu: any) => ({
-        id: cu.id,
-        org_id: cu.org_id || defaultOrg.id,
-        full_name: cu.full_name || "ผู้ใช้งาน",
-        email: cu.email || "user@medtree.com",
-        role: (cu.role || "member") as UserRole,
-        team_id: cu.team_id || "team-consult",
-        phone_number: cu.phone_number || undefined,
-        line_user_id: cu.line_user_id || undefined,
-        created_at: cu.created_at || new Date().toISOString(),
-      }));
+      let currentUsersList = users;
+      try {
+        const saved = localStorage.getItem("taskflow_users");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) currentUsersList = parsed;
+        }
+      } catch {}
+
+      const userMap = new Map<string, UserProfile>();
+      currentUsersList.forEach((u) => userMap.set(u.id, u));
+
+      cloudData.users.forEach((cu: any) => {
+        const existing = userMap.get(cu.id);
+        if (existing) {
+          userMap.set(cu.id, {
+            ...existing,
+            full_name: existing.full_name || cu.full_name,
+            email: existing.email || cu.email,
+            role: existing.role || cu.role,
+            team_id: existing.team_id || cu.team_id,
+            line_user_id: existing.line_user_id || cu.line_user_id,
+            phone_number: existing.phone_number || cu.phone_number,
+          });
+        } else {
+          userMap.set(cu.id, {
+            id: cu.id,
+            org_id: cu.org_id || defaultOrg.id,
+            full_name: cu.full_name || "ผู้ใช้งาน",
+            email: cu.email || "user@medtree.com",
+            role: (cu.role || "member") as UserRole,
+            team_id: cu.team_id || "team-consult",
+            phone_number: cu.phone_number || undefined,
+            line_user_id: cu.line_user_id || undefined,
+            created_at: cu.created_at || new Date().toISOString(),
+          });
+        }
+      });
+
+      const mergedUsers = Array.from(userMap.values());
       setUsers(mergedUsers);
       saveUsersState(mergedUsers);
 
       const currentMatch = mergedUsers.find((u) => u.id === currentUser.id);
       if (currentMatch) {
         setCurrentUser(currentMatch);
+        try { localStorage.setItem("taskflow_current_user", JSON.stringify(currentMatch)); } catch {}
       }
     }
 
-    if (cloudData.comments && Array.isArray(cloudData.comments)) setComments(cloudData.comments);
-    if (cloudData.attachments && Array.isArray(cloudData.attachments)) setAttachments(cloudData.attachments);
-    if (cloudData.issues && Array.isArray(cloudData.issues)) setIssues(cloudData.issues);
-    if (cloudData.timeEntries && Array.isArray(cloudData.timeEntries)) setTimeEntries(cloudData.timeEntries);
-    if (cloudData.activityLogs && Array.isArray(cloudData.activityLogs)) setActivityLogs(cloudData.activityLogs);
+    if (cloudData.comments && Array.isArray(cloudData.comments)) {
+      setComments(cloudData.comments);
+      try { localStorage.setItem("taskflow_comments", JSON.stringify(cloudData.comments)); } catch {}
+    }
+    if (cloudData.attachments && Array.isArray(cloudData.attachments)) {
+      setAttachments(cloudData.attachments);
+      try { localStorage.setItem("taskflow_attachments", JSON.stringify(cloudData.attachments)); } catch {}
+    }
+    if (cloudData.issues && Array.isArray(cloudData.issues)) {
+      setIssues(cloudData.issues);
+      try { localStorage.setItem("taskflow_issues", JSON.stringify(cloudData.issues)); } catch {}
+    }
+    if (cloudData.timeEntries && Array.isArray(cloudData.timeEntries)) {
+      setTimeEntries(cloudData.timeEntries);
+      try { localStorage.setItem("taskflow_time_entries", JSON.stringify(cloudData.timeEntries)); } catch {}
+    }
+    if (cloudData.activityLogs && Array.isArray(cloudData.activityLogs)) {
+      let localLogs: ActivityLog[] = [];
+      try {
+        const saved = localStorage.getItem("taskflow_logs");
+        if (saved) localLogs = JSON.parse(saved);
+      } catch {}
+      const logMap = new Map<string, ActivityLog>();
+      localLogs.forEach((l) => logMap.set(l.id, l));
+      cloudData.activityLogs.forEach((cl: any) => logMap.set(cl.id, cl));
+      const mergedLogs = Array.from(logMap.values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setActivityLogs(mergedLogs);
+      try { localStorage.setItem("taskflow_logs", JSON.stringify(mergedLogs.slice(0, 150))); } catch {}
+    }
   };
 
   const syncCloudData = async (): Promise<boolean> => {
@@ -702,7 +854,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     phone_number?: string;
   }): UserProfile => {
     const newUser: UserProfile = {
-      id: `u-${Date.now()}`,
+      id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       org_id: defaultOrg.id,
       full_name: userData.full_name,
       email: userData.email,
@@ -717,6 +869,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setUsers(updatedUsers);
     saveUsersState(updatedUsers);
     SupabaseSyncService.saveUser(newUser);
+    logUserActivity("user_created", `เพิ่มสมาชิกใหม่: ${newUser.full_name} (${newUser.email}) - สิทธิ์ ${newUser.role.toUpperCase()}`);
     return newUser;
   };
 
@@ -724,11 +877,23 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedUsers = users.map((u) => (u.id === userId ? { ...u, ...updates } : u));
     setUsers(updatedUsers);
     saveUsersState(updatedUsers);
-    SupabaseSyncService.saveUser({ id: userId, ...updates });
+
+    const targetUser = updatedUsers.find((u) => u.id === userId);
+    if (targetUser) {
+      SupabaseSyncService.saveUser(targetUser);
+    } else {
+      SupabaseSyncService.saveUser({ id: userId, ...updates });
+    }
 
     if (currentUser.id === userId) {
-      setCurrentUser((prev) => ({ ...prev, ...updates }));
+      const updatedCurrent = { ...currentUser, ...updates };
+      setCurrentUser(updatedCurrent);
+      try {
+        localStorage.setItem("taskflow_current_user", JSON.stringify(updatedCurrent));
+      } catch {}
     }
+
+    logUserActivity("user_updated", `แก้ไขข้อมูลสมาชิก: ${targetUser?.full_name || userId} (${targetUser?.email || ""})`);
 
     if (updates.full_name || updates.role) {
       const updatedTasks = tasks.map((t) => ({
@@ -745,13 +910,18 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (users.length <= 1) {
       return { success: false, message: "ไม่สามารถลบผู้ใช้คนสุดท้ายของระบบได้" };
     }
+    const targetUser = users.find(u => u.id === userId);
     const updatedUsers = users.filter((u) => u.id !== userId);
     setUsers(updatedUsers);
     saveUsersState(updatedUsers);
     SupabaseSyncService.deleteUser(userId);
+    logUserActivity("user_deleted", `ลบสมาชิก: ${targetUser?.full_name || userId}`);
 
     if (currentUser.id === userId && updatedUsers.length > 0) {
       setCurrentUser(updatedUsers[0]);
+      try {
+        localStorage.setItem("taskflow_current_user", JSON.stringify(updatedUsers[0]));
+      } catch {}
     }
     return { success: true };
   };
@@ -759,7 +929,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   // Team Management with Full Cloud Persistence
   const addTeam = (name: string, nameEn?: string, description?: string): Team => {
     const newTeam: Team = {
-      id: `team-${Date.now()}`,
+      id: `team-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       org_id: defaultOrg.id,
       name,
       name_en: nameEn || name,
@@ -770,6 +940,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setTeams(updatedTeams);
     saveTeamsState(updatedTeams);
     SupabaseSyncService.saveTeam(newTeam);
+    logUserActivity("team_created", `เพิ่มฝ่ายงาน: ${name}`);
     return newTeam;
   };
 
@@ -778,23 +949,26 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setTeams(updatedTeams);
     saveTeamsState(updatedTeams);
     SupabaseSyncService.saveTeam({ id: teamId, name, name_en: nameEn, description });
+    logUserActivity("team_updated", `แก้ไขฝ่ายงาน: ${name}`);
   };
 
   const deleteTeam = (teamId: string): { success: boolean; message?: string } => {
     if (teams.length <= 1) {
       return { success: false, message: "ไม่สามารถลบทีมสุดท้ายได้" };
     }
+    const targetTeam = teams.find(t => t.id === teamId);
     const updatedTeams = teams.filter((t) => t.id !== teamId);
     setTeams(updatedTeams);
     saveTeamsState(updatedTeams);
     SupabaseSyncService.deleteTeam(teamId);
+    logUserActivity("team_deleted", `ลบฝ่ายงาน: ${targetTeam?.name || teamId}`);
     return { success: true };
   };
 
   // Project Management with Full Cloud Persistence
   const addProject = (name: string, nameEn?: string, teamId?: string): Project => {
     const newProject: Project = {
-      id: `p-${Date.now()}`,
+      id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       org_id: defaultOrg.id,
       name,
       name_en: nameEn || name,
@@ -805,6 +979,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setProjects(updated);
     try { localStorage.setItem("taskflow_projects", JSON.stringify(updated)); } catch {}
     SupabaseSyncService.saveProject(newProject);
+    logUserActivity("project_created", `เพิ่มโครงการใหม่: ${name}`);
     return newProject;
   };
 
@@ -813,12 +988,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setProjects(updated);
     try { localStorage.setItem("taskflow_projects", JSON.stringify(updated)); } catch {}
     SupabaseSyncService.saveProject({ id: projectId, name, name_en: nameEn, team_id: teamId });
+    logUserActivity("project_updated", `แก้ไขโครงการ: ${name}`);
   };
 
   const deleteProject = (projectId: string): { success: boolean; message?: string } => {
     if (projects.length <= 1) {
       return { success: false, message: "ไม่สามารถลบโครงการสุดท้ายได้ (ต้องมีอย่างน้อย 1 โครงการ)" };
     }
+    const targetProject = projects.find(p => p.id === projectId);
     const updatedProjects = projects.filter((p) => p.id !== projectId);
     setProjects(updatedProjects);
 
@@ -836,6 +1013,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     } catch {}
 
     SupabaseSyncService.deleteProject(projectId);
+    logUserActivity("project_deleted", `ลบโครงการ: ${targetProject?.name || projectId}`);
     return { success: true };
   };
 
@@ -921,6 +1099,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     // Persist to Supabase Cloud for cross-device visibility
     SupabaseSyncService.saveTask(newTask, newTask.permit_details || undefined);
+    SupabaseSyncService.saveActivityLog(newLog);
 
     if (newTask.assignees && newTask.assignees.length > 0) {
       newTask.assignees.forEach((assignee) => {
@@ -969,7 +1148,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     };
 
     const newLog: ActivityLog = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       task_id: taskId,
       user_id: currentUser.id,
       action: "status_changed",
@@ -985,12 +1164,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, issues, updatedLogs);
 
-    // Persist status change to Supabase Cloud
+    // Persist status change & activity log to Supabase Cloud
     SupabaseSyncService.saveTask({
       id: taskId,
       status: newStatus,
       status_changed_at: new Date().toISOString(),
     });
+    SupabaseSyncService.saveActivityLog(newLog);
 
     const notif: NotificationItem = {
       id: `notif-${Date.now()}`,
@@ -1117,7 +1297,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setTasks(updatedTasks);
 
     const newLog: ActivityLog = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       task_id: taskId,
       user_id: currentUser.id,
       action: "issue_raised",
@@ -1129,8 +1309,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, updatedIssues, updatedLogs);
 
-    // Persist issue to Supabase Cloud
+    // Persist issue & activity log to Supabase Cloud
     SupabaseSyncService.saveIssue(newIssue);
+    SupabaseSyncService.saveActivityLog(newLog);
 
     const targetTask = tasks.find((t) => t.id === taskId);
 
@@ -1213,7 +1394,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setTasks(updatedTasks);
 
     const newLog: ActivityLog = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       task_id: issue.task_id,
       user_id: currentUser.id,
       action: "issue_resolved",
@@ -1234,7 +1415,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("taskflow_notifications", JSON.stringify(updatedNotifs));
     } catch {}
 
-    // Persist issue resolution to Supabase Cloud
+    // Persist issue resolution & activity log to Supabase Cloud
     SupabaseSyncService.saveIssue({
       id: issueId,
       task_id: issue.task_id,
@@ -1244,6 +1425,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       resolved_at: new Date().toISOString(),
       resolution_description: resolution,
     });
+    SupabaseSyncService.saveActivityLog(newLog);
   };
 
   const updatePermitDetails = (taskId: string, updates: Partial<PermitDetails>) => {
@@ -1294,7 +1476,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     });
 
     const newLog: ActivityLog = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       task_id: taskId,
       user_id: currentUser.id,
       action: "permit_status_changed",
@@ -1309,8 +1491,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setActivityLogs(updatedLogs);
     saveState(updatedTasks, issues, updatedLogs);
 
-    // Persist permit status to Supabase Cloud directly
+    // Persist permit status & activity log to Supabase Cloud directly
     SupabaseSyncService.updatePermitStatus(taskId, newStatus, newRevisionRound);
+    SupabaseSyncService.saveActivityLog(newLog);
   };
 
   const addComment = async (taskId: string, content: string, contentEn?: string): Promise<Comment> => {
@@ -1332,14 +1515,27 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const updatedComments = [...comments, newComment];
     setComments(updatedComments);
 
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      task_id: taskId,
+      user_id: currentUser.id,
+      action: "comment_added",
+      new_value: content.slice(0, 100),
+      created_at: new Date().toISOString(),
+      user: currentUser,
+    };
+    const updatedLogs = [newLog, ...activityLogs];
+    setActivityLogs(updatedLogs);
+
     const updatedTasks = tasks.map((t) =>
       t.id === taskId ? { ...t, comments_count: (t.comments_count || 0) + 1 } : t
     );
     setTasks(updatedTasks);
-    saveState(updatedTasks, issues, activityLogs);
+    saveState(updatedTasks, issues, updatedLogs);
 
-    // Persist comment to Supabase Cloud
+    // Persist comment & log to Supabase Cloud
     SupabaseSyncService.saveComment(newComment);
+    SupabaseSyncService.saveActivityLog(newLog);
 
     return newComment;
   };
