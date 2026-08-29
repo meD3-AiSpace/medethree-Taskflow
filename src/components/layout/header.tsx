@@ -13,6 +13,7 @@ import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { InstallPWAButton } from "@/components/ui/install-pwa-button";
+import { SyncStatusBadge } from "@/components/ui/sync-status-badge";
 import { LighthouseLogo } from "@/components/ui/lighthouse-logo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/utils";
@@ -92,16 +93,16 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 border-b bg-card/95 backdrop-blur-xs px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 print:hidden transform-gpu will-change-transform">
-      {/* Left: Mobile Hamburger + Brand Logo + Clean Profile Badge */}
-      <div className="flex items-center gap-2.5">
+    <header className="h-16 border-b bg-card/95 backdrop-blur-xs px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 print:hidden transform-gpu will-change-transform">
+      {/* Left: Mobile Hamburger + Brand Logo + Live Sync Badge */}
+      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
         {/* Mobile Hamburger Button */}
         {onOpenMobileMenu && (
           <Button
             variant="outline"
             size="icon"
             onClick={onOpenMobileMenu}
-            className="md:hidden h-9 w-9 text-foreground hover:bg-accent cursor-pointer"
+            className="md:hidden h-9 w-9 text-foreground hover:bg-accent cursor-pointer shrink-0"
             aria-label="Open Navigation Menu"
           >
             <Menu className="h-5 w-5 text-emerald-600" />
@@ -113,12 +114,12 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
           type="button"
           onClick={() => window.location.reload()}
           title="คลิกเพื่อโหลดหน้าจอใหม่ (Reload / Refresh Page - F5)"
-          className="md:hidden flex items-center cursor-pointer bg-transparent border-0 p-0 hover:opacity-85 active:scale-95 transition-all select-none"
+          className="md:hidden flex items-center cursor-pointer bg-transparent border-0 p-0 hover:opacity-85 active:scale-95 transition-all select-none shrink-0"
         >
           <LighthouseLogo size="xs" showText={false} />
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           <Badge
             variant={
               currentUser?.role === "admin"
@@ -127,13 +128,16 @@ export function Header({ onOpenMobileMenu }: HeaderProps) {
                 ? "high"
                 : "medium"
             }
-            className="capitalize text-[11px] font-semibold"
+            className="capitalize text-[10px] sm:text-[11px] font-semibold shrink-0"
           >
             {currentUser?.role?.toUpperCase() || "MEMBER"}
           </Badge>
-          <span className="text-xs font-bold text-foreground hidden sm:inline truncate max-w-[220px]">
+          <span className="text-xs font-bold text-foreground hidden sm:inline truncate max-w-[180px]">
             {getLocalizedDynamicText(currentUser?.full_name, null, lang) || (lang === "th" ? "ผู้ใช้งาน" : "User")}
           </span>
+
+          {/* Live Sync Health & Realtime Badge */}
+          <SyncStatusBadge />
         </div>
       </div>
 

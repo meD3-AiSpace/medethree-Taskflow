@@ -23,6 +23,7 @@ import {
 import { validateStateTransition } from "@/lib/workflow/state-machine";
 import { translateText } from "@/lib/i18n/auto-translate";
 import { SupabaseSyncService } from "@/lib/supabase/sync-service";
+import { RealtimeSyncService } from "@/lib/supabase/realtime-service";
 
 // Default Initial Organization
 const defaultOrg = {
@@ -771,13 +772,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Multi-Device Auto-Sync: Initial Mount + Window Focus + 15s Gentle Background Heartbeat
+  // Multi-Device Real-Time & Resilient Auto-Sync
   useEffect(() => {
     let isMounted = true;
+    const targetOrgId = currentUser?.org_id || defaultOrg.id;
+
     const fetchLatest = async (silent = false) => {
       try {
         if (!silent) setIsSyncing(true);
-        const cloudData = await SupabaseSyncService.fetchCloudData(currentUser?.org_id || defaultOrg.id);
+        const cloudData = await SupabaseSyncService.fetchCloudData(targetOrgId);
         if (isMounted && cloudData) {
           applyCloudData(cloudData);
         }
@@ -791,7 +794,114 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     // 1. Initial Load on Mount
     fetchLatest(false);
 
-    // 2. Window Focus Sync (When switching back to this browser tab or unlocking device)
+    // 2. Connect Supabase Real-Time WebSocket Channel (<200ms Instant Delta Merge)
+    RealtimeSyncService.subscribeToOrg(targetOrgId);
+
+    const unsubRealtime = RealtimeSyncService.onRealtimeEvent((event) => {
+      if (!isMounted) return;
+
+      if (event.table === "tasks") {
+        if (event.eventType === "INSERT") {
+          const raw = event.newRecord;
+          const project = projects.find((p) => p.id === raw.project_id) || defaultProjects[0];
+          const creator = users.find((u) => u.id === raw.created_by) || currentUser;
+          const newTask: Task = {
+            id: raw.id,
+            org_id: raw.org_id || targetOrgId,
+            project_id: raw.project_id || project.id,
+            category: raw.category || "design",
+            title: raw.title || "งานใหม่",
+            title_en: raw.title_en || raw.title,
+            description: raw.description || "",
+            description_en: raw.description_en || raw.description,
+            status: raw.status || "todo",
+            priority: raw.priority || "medium",
+            created_by: raw.created_by || creator.id,
+            deadline: raw.deadline || null,
+            created_at: raw.created_at || new Date().toISOString(),
+            updated_at: raw.updated_at || new Date().toISOString(),
+            project,
+            creator,
+            assignees: [],
+            comments_count: 0,
+            unresolved_issues_count: 0,
+          };
+          setTasks((prev) => {
+            if (prev.some((t) => t.id === raw.id)) return prev;
+            const updated = [newTask, ...prev];
+            try { localStorage.setItem("taskflow_tasks", JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        } else if (event.eventType === "UPDATE") {
+          const raw = event.newRecord;
+          setTasks((prev) => {
+            const updated = prev.map((t) => (t.id === raw.id ? { ...t, ...raw } : t));
+            try { localStorage.setItem("taskflow_tasks", JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        } else if (event.eventType === "DELETE") {
+          const raw = event.oldRecord;
+          if (raw?.id) {
+            setTasks((prev) => {
+              const updated = prev.filter((t) => t.id !== raw.id);
+              try { localStorage.setItem("taskflow_tasks", JSON.stringify(updated)); } catch {}
+              return updated;
+            });
+          }
+        }
+      } else if (event.table === "task_issues") {
+        if (event.eventType === "INSERT") {
+          const raw = event.newRecord;
+          setIssues((prev) => {
+            if (prev.some((i) => i.id === raw.id)) return prev;
+            const updated = [raw, ...prev];
+            try { localStorage.setItem("taskflow_issues", JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        } else if (event.eventType === "UPDATE") {
+          const raw = event.newRecord;
+          setIssues((prev) => {
+            const updated = prev.map((i) => (i.id === raw.id ? { ...i, ...raw } : i));
+            try { localStorage.setItem("taskflow_issues", JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        } else if (event.eventType === "DELETE") {
+          const raw = event.oldRecord;
+          if (raw?.id) {
+            setIssues((prev) => {
+              const updated = prev.filter((i) => i.id !== raw.id);
+              try { localStorage.setItem("taskflow_issues", JSON.stringify(updated)); } catch {}
+              return updated;
+            });
+          }
+        }
+      } else if (event.table === "comments") {
+        if (event.eventType === "INSERT") {
+          const raw = event.newRecord;
+          setComments((prev) => {
+            if (prev.some((c) => c.id === raw.id)) return prev;
+            const updated = [...prev, raw];
+            try { localStorage.setItem("taskflow_comments", JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+        }
+      } else if (event.table === "users") {
+        if (event.eventType === "INSERT" || event.eventType === "UPDATE") {
+          const raw = event.newRecord;
+          setUsers((prev) => {
+            const exists = prev.some((u) => u.id === raw.id);
+            const updated = exists ? prev.map((u) => (u.id === raw.id ? { ...u, ...raw } : u)) : [...prev, raw];
+            try { localStorage.setItem("taskflow_users", JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+          if (currentUser?.id === raw.id) {
+            setCurrentUser((prev) => ({ ...prev, ...raw }));
+          }
+        }
+      }
+    });
+
+    // 3. Window Focus Sync (When switching back to this browser tab or unlocking device)
     const handleFocus = () => {
       fetchLatest(true);
     };
@@ -804,13 +914,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("focus", handleFocus);
     document.addEventListener("visibilitychange", handleVisibility);
 
-    // 3. Gentle Background Heartbeat (every 15 seconds)
+    // 4. Gentle Background Heartbeat (every 30 seconds as safety net)
     const interval = setInterval(() => {
       fetchLatest(true);
-    }, 15000);
+    }, 30000);
 
     return () => {
       isMounted = false;
+      unsubRealtime();
+      RealtimeSyncService.unsubscribe();
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
       clearInterval(interval);
