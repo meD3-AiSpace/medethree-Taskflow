@@ -97,7 +97,7 @@ Content-Type: application/json
 ###
 
 ### 6. [POST] AI Dynamic Architectural Translation (Bilingual Engine)
-POST {{baseUrl}}/api/ai/translate
+POST {{baseUrl}}/api/translate
 Content-Type: application/json
 
 {

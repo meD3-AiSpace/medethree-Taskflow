@@ -17,7 +17,7 @@ import { useLanguage } from "@/lib/i18n/language-context";
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { tasks, notifications, currentUser } = useTaskStore();
+  const { tasks, notifications } = useTaskStore();
   const { lang } = useLanguage();
 
   const activeTaskIds = new Set(tasks.map((t) => t.id));
@@ -25,8 +25,6 @@ export function MobileNav() {
     (n) => !n.is_read && (!n.task_id || activeTaskIds.has(n.task_id))
   ).length;
   const permitCount = tasks.filter((t) => t.category === "permit").length;
-
-  const isAdmin = currentUser?.role === "admin";
 
   const navItems = [
     {

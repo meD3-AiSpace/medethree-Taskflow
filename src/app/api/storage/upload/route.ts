@@ -29,6 +29,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
     }
 
+    // 2. File Size Validation: Max 25 MB
+    const MAX_FILE_SIZE = 25 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: "File size exceeds the 25 MB limit" },
+        { status: 400 }
+      );
+    }
+
+    // 3. Sanitize taskId to prevent path traversal
+    const safeTaskId = taskId.replace(/[^a-zA-Z0-9_-]/g, "");
+
     let supabase = null;
     try {
       supabase = createAdminClient();
@@ -46,7 +58,8 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const bucketName = "task-attachments";
-    const filePath = `${taskId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const folderName = safeTaskId || "general";
+    const filePath = `${folderName}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
     // Upload to Supabase Storage bucket
     const { data: uploadData, error: uploadError } = await supabase.storage
