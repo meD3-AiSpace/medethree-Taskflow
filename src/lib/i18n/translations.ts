@@ -189,6 +189,11 @@ export const translations = {
     // Categories
     catDesign: "งานออกแบบ (Design)",
     catPermit: "ใบขออนุญาต (Permit)",
+    catStructure: "วิศวกรรมโครงสร้าง (Structure)",
+    catMep: "งานระบบ MEP (MEP Engineering)",
+    catInterior: "ออกแบบตกแต่งภายใน (Interior)",
+    catLandscape: "ภูมิสถาปัตยกรรม (Landscape)",
+    catInspection: "ตรวจรับงาน/ควบคุมงาน (Inspection)",
     catSite: "งานหน้างาน (Site)",
     catOther: "งานทั่วไป (Other)",
 
@@ -395,8 +400,13 @@ export const translations = {
     userRole: "System Role",
 
     // Categories
-    catDesign: "Design",
-    catPermit: "Permit",
+    catDesign: "Architectural Design",
+    catPermit: "Building Permit",
+    catStructure: "Structural Engineering",
+    catMep: "MEP Engineering",
+    catInterior: "Interior Design",
+    catLandscape: "Landscape",
+    catInspection: "Inspection & QA",
     catSite: "Site / Build",
     catOther: "Other",
 

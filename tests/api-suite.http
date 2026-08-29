@@ -1,0 +1,128 @@
+### ====================================================================
+### Lighthouse TaskFlow — REST Client API Test Suite (v3.1)
+### Use with "REST Client" (humao.rest-client) in Antigravity IDE
+### Click "Send Request" above any request to execute
+### ====================================================================
+
+@baseUrl = http://localhost:3000
+@orgId = 11111111-1111-1111-1111-111111111111
+@testTaskId = test-task-http-001
+
+### 1. [GET] Cloud Sync Snapshot (Fetch all tasks, permits, teams, users)
+GET {{baseUrl}}/api/sync?org_id={{orgId}}
+Content-Type: application/json
+
+###
+
+### 2. [POST] Save New Architectural Task (Design / Permit / Structure / MEP)
+POST {{baseUrl}}/api/sync
+Content-Type: application/json
+
+{
+  "action": "save_task",
+  "payload": {
+    "task": {
+      "id": "{{testTaskId}}",
+      "org_id": "{{orgId}}",
+      "project_id": "proj-1",
+      "category": "structure",
+      "title": "ตรวจสอบแบบวิศวกรรมโครงสร้างชั้นใต้ดิน",
+      "description": "คำนวณกำลังรับน้ำหนักเสาเข็มและคานคอดินตามมาตรฐาน ว.ส.ท.",
+      "status": "todo",
+      "priority": "high",
+      "created_by": "user-admin",
+      "deadline": "2026-09-15T17:00:00.000Z",
+      "assignees": ["user-eng-1"]
+    },
+    "permitDetails": null
+  }
+}
+
+###
+
+### 3. [POST] Report a Blocker Issue (Site / Permit / Inspection)
+POST {{baseUrl}}/api/sync
+Content-Type: application/json
+
+{
+  "action": "report_issue",
+  "payload": {
+    "issue": {
+      "id": "issue-http-001",
+      "task_id": "{{testTaskId}}",
+      "raised_by": "user-admin",
+      "title": "แบบโครงสร้างขัดแย้งกับท่อ MEP",
+      "description": "ระดับท่อน้ำทิ้งหลักขัดแย้งกับคานหลัก B1 บริเวณแกน 4-C",
+      "status": "open",
+      "severity": "critical"
+    }
+  }
+}
+
+###
+
+### 4. [POST] Resolve Blocker Issue
+POST {{baseUrl}}/api/sync
+Content-Type: application/json
+
+{
+  "action": "resolve_issue",
+  "payload": {
+    "issueId": "issue-http-001",
+    "resolution": "ปรับระดับเดินท่อลอดใต้คานพร้อมเสริมปลอก Sleeves กันซึม",
+    "resolvedBy": "user-admin"
+  }
+}
+
+###
+
+### 5. [POST] Add Comment with Bilingual Content
+POST {{baseUrl}}/api/sync
+Content-Type: application/json
+
+{
+  "action": "save_comment",
+  "payload": {
+    "comment": {
+      "id": "comm-http-001",
+      "task_id": "{{testTaskId}}",
+      "user_id": "user-admin",
+      "content": "ประสานงานกับวิศวกรสุขาภิบาลเรียบร้อยแล้ว เตรียมออก RFI",
+      "content_en": "Coordinated with MEP engineer. Ready to issue RFI.",
+      "created_at": "2026-08-29T10:00:00.000Z"
+    }
+  }
+}
+
+###
+
+### 6. [POST] AI Dynamic Architectural Translation (Bilingual Engine)
+POST {{baseUrl}}/api/ai/translate
+Content-Type: application/json
+
+{
+  "text": "ยื่นขออนุญาตก่อสร้างอาคาร ค.ส.ล. 4 ชั้น พร้อมแบบสถาปัตยกรรมและรายการคำนวณโครงสร้าง",
+  "context": "architecture_permit"
+}
+
+###
+
+### 7. [POST] Log Architectural Audit Activity
+POST {{baseUrl}}/api/sync
+Content-Type: application/json
+
+{
+  "action": "log_activity",
+  "payload": {
+    "log": {
+      "id": "log-http-001",
+      "org_id": "{{orgId}}",
+      "user_id": "user-admin",
+      "user_name": "Supakit Medethree",
+      "user_role": "admin",
+      "action": "Task Category Upgraded",
+      "details": "Synchronized 9 architectural disciplines with Supabase CDC",
+      "created_at": "2026-08-29T10:00:00.000Z"
+    }
+  }
+}

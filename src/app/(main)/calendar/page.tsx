@@ -240,6 +240,11 @@ export default function CalendarPage() {
               <option value="all">{t("allCategories")}</option>
               <option value="design">{t("catDesign")}</option>
               <option value="permit">{t("catPermit")}</option>
+              <option value="structure">{t("catStructure")}</option>
+              <option value="mep">{t("catMep")}</option>
+              <option value="interior">{t("catInterior")}</option>
+              <option value="landscape">{t("catLandscape")}</option>
+              <option value="inspection">{t("catInspection")}</option>
               <option value="site">{t("catSite")}</option>
               <option value="other">{t("catOther")}</option>
             </select>

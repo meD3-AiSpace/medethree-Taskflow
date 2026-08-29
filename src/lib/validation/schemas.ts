@@ -6,7 +6,17 @@ import { z } from "zod";
 
 export const TaskStatusEnum = z.enum(["todo", "assigned", "in_progress", "review", "completed"]);
 export const TaskPriorityEnum = z.enum(["low", "medium", "high", "urgent"]);
-export const TaskCategoryEnum = z.enum(["design", "permit", "structure", "mep", "interior", "landscape", "inspection"]);
+export const TaskCategoryEnum = z.enum([
+  "design",
+  "permit",
+  "structure",
+  "mep",
+  "interior",
+  "landscape",
+  "inspection",
+  "site",
+  "other",
+]);
 export const PermitStatusEnum = z.enum(["preparing", "submitted", "under_review", "needs_revision", "approved", "rejected"]);
 export const LanguageEnum = z.enum(["th", "en"]);
 

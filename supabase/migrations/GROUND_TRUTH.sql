@@ -61,9 +61,10 @@ CREATE TABLE IF NOT EXISTS public.tasks (
 
 -- 6. Task Assignees
 CREATE TABLE IF NOT EXISTS public.task_assignees (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     task_id TEXT NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
     user_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    PRIMARY KEY (task_id, user_id)
+    UNIQUE (task_id, user_id)
 );
 
 -- 7. Comments
@@ -112,7 +113,8 @@ CREATE TABLE IF NOT EXISTS public.task_issues (
 
 -- 11. Permit Details
 CREATE TABLE IF NOT EXISTS public.permit_details (
-    task_id TEXT PRIMARY KEY REFERENCES public.tasks(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    task_id TEXT NOT NULL UNIQUE REFERENCES public.tasks(id) ON DELETE CASCADE,
     permit_type TEXT NOT NULL DEFAULT 'ใบอนุญาตก่อสร้าง',
     authority TEXT NOT NULL DEFAULT 'เทศบาล/อบต.',
     submitted_date DATE,

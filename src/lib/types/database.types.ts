@@ -4,7 +4,16 @@
 
 export type UserRole = 'admin' | 'manager' | 'member' | 'viewer';
 
-export type TaskCategory = 'design' | 'permit' | 'site' | 'other';
+export type TaskCategory = 
+  | 'design' 
+  | 'permit' 
+  | 'structure' 
+  | 'mep' 
+  | 'interior' 
+  | 'landscape' 
+  | 'inspection' 
+  | 'site' 
+  | 'other';
 
 export type TaskStatus = 'todo' | 'assigned' | 'in_progress' | 'review' | 'completed';
 

@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     org_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
     project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
-    category TEXT NOT NULL CHECK (category IN ('design', 'permit', 'site', 'other')) DEFAULT 'design',
+    category TEXT NOT NULL CHECK (category IN ('design', 'permit', 'structure', 'mep', 'interior', 'landscape', 'inspection', 'site', 'other')) DEFAULT 'design',
     title TEXT NOT NULL,
     description TEXT,
     status TEXT NOT NULL CHECK (status IN ('todo', 'assigned', 'in_progress', 'review', 'completed')) DEFAULT 'todo',
@@ -72,9 +72,10 @@ CREATE TABLE IF NOT EXISTS public.tasks (
 -- 6. Task Assignees (Many-to-Many)
 -- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.task_assignees (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    PRIMARY KEY (task_id, user_id)
+    UNIQUE (task_id, user_id)
 );
 
 -- --------------------------------------------------------------------
@@ -133,7 +134,8 @@ CREATE TABLE IF NOT EXISTS public.task_issues (
 -- 11. Permit Details (Section 3.8)
 -- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.permit_details (
-    task_id UUID PRIMARY KEY REFERENCES public.tasks(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    task_id UUID NOT NULL UNIQUE REFERENCES public.tasks(id) ON DELETE CASCADE,
     permit_type TEXT NOT NULL DEFAULT 'ใบอนุญาตก่อสร้าง',
     authority TEXT NOT NULL DEFAULT 'เทศบาล/อบต.',
     submitted_date DATE,

@@ -1,0 +1,36 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "tailwindCSS.emmetCompletions": true,
+  "sqltools.connections": [
+    {
+      "name": "Supabase Cloud Database (TaskFlow)",
+      "driver": "PostgreSQL",
+      "previewLimit": 50,
+      "server": "${env:SUPABASE_DB_HOST}",
+      "port": 5432,
+      "database": "postgres",
+      "username": "postgres",
+      "password": "${env:SUPABASE_DB_PASSWORD}",
+      "connectionTimeout": 15
+    }
+  ],
+  "rest-client.environmentVariables": {
+    "$default": {
+      "baseUrl": "http://localhost:3000"
+    },
+    "local": {
+      "baseUrl": "http://localhost:3000"
+    },
+    "production": {
+      "baseUrl": "https://taskflow.medethree.com"
+    }
+  }
+}
