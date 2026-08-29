@@ -1206,7 +1206,7 @@ export default function SettingsPage() {
                   team_id: userTeamId || teams[0]?.id,
                   line_user_id: userLineId.trim() || null,
                 });
-                setUserMsg({ success: true, text: lang === "th" ? `อัปเดตข้อมูลคุณ "${userName}" เรียบร้อยแล้ว` : `Updated ${userName} successfully` });
+                setUserMsg({ success: true, text: lang === "th" ? `✓ บันทึกข้อมูลคุณ "${userName}" (${userEmail}) สำเร็จแล้ว` : `✓ Saved ${userName} (${userEmail}) successfully` });
               } else {
                 addUser({
                   full_name: userName.trim(),
@@ -1216,8 +1216,9 @@ export default function SettingsPage() {
                   team_id: userTeamId || teams[0]?.id,
                   line_user_id: userLineId.trim() || undefined,
                 });
-                setUserMsg({ success: true, text: lang === "th" ? `เพิ่มสมาชิก "${userName}" และกำหนดสิทธิ์ ${userRole.toUpperCase()} เรียบร้อยแล้ว` : `Added ${userName} with ${userRole.toUpperCase()} role` });
+                setUserMsg({ success: true, text: lang === "th" ? `✓ เพิ่มสมาชิก "${userName}" และกำหนดสิทธิ์ ${userRole.toUpperCase()} เรียบร้อยแล้ว` : `✓ Added ${userName} with ${userRole.toUpperCase()} role` });
               }
+              setTimeout(() => setUserMsg(null), 5000);
               setShowUserModal(false);
             }}
             className="space-y-4 text-xs pt-2"
